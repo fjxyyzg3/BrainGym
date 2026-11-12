@@ -41,19 +41,10 @@ function Icon({
   name,
   size = 20,
 }: {
-  name:
-    "grid" | "chart" | "arrow" | "user" | "close" | "check" | "clock" | "help";
+  name: "chart" | "arrow" | "user" | "close" | "check" | "clock";
   size?: number;
 }) {
   const paths: Record<string, ReactNode> = {
-    grid: (
-      <>
-        <rect x="3" y="3" width="7" height="7" rx="1.5" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" />
-      </>
-    ),
     chart: (
       <>
         <path d="M4 3v17h17M9 15V9m5 6V5m5 10v-4" />
@@ -72,12 +63,6 @@ function Icon({
       <>
         <circle cx="12" cy="12" r="9" />
         <path d="M12 7v5l3 2" />
-      </>
-    ),
-    help: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .6-1.5 1-1.5 2M12 16v.1" />
       </>
     ),
   };
@@ -280,59 +265,43 @@ export function App() {
   };
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="#home" aria-label="BrainGym 首页">
-          <span className="brand-symbol">
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
-          <span>
-            Brain<span className="brand-light">Gym</span>
-          </span>
-        </a>
-        <p className="nav-label">你的训练空间</p>
-        <nav aria-label="主导航">
-          <a
-            href="#home"
-            className={page === "home" || page === "n-back" ? "active" : ""}
-          >
-            <Icon name="grid" />
-            训练大厅
-            <span className="nav-dot" />
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("main-content")?.focus();
+        }}
+      >
+        跳到主要内容
+      </a>
+      <header className="topbar">
+        <div className="topbar-inner">
+          <a className="brand" href="#home" aria-label="BrainGym 首页">
+            <span className="brand-symbol" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+            <span>BrainGym</span>
           </a>
-          <a href="#records" className={page === "records" ? "active" : ""}>
-            <Icon name="chart" />
-            个人记录
-          </a>
-        </nav>
-        <div className="sidebar-note">
-          <span className="small-spark">✳</span>
-          <strong>一小段时间，一次专注。</strong>
-          <p>
-            保持自己的节奏，
-            <br />
-            从今天的一局开始。
-          </p>
-        </div>
-        <div className="sidebar-footer">
-          <span className="status-dot" />
-          轻量 · 专注 · 为自己练习
-        </div>
-      </aside>
-      <div className="workspace">
-        <header className="topbar">
-          <div className="breadcrumb">
-            我的空间 <span>/</span>{" "}
-            <strong>
-              {page === "records"
-                ? "个人记录"
-                : page === "n-back"
-                  ? "空间 N-back"
-                  : "训练大厅"}
-            </strong>
-          </div>
+          <nav className="main-nav" aria-label="主导航">
+            <a
+              href="#home"
+              className={page === "home" || page === "n-back" ? "active" : ""}
+              aria-current={page === "home" ? "page" : undefined}
+            >
+              训练大厅
+            </a>
+            <a
+              href="#records"
+              className={page === "records" ? "active" : ""}
+              aria-current={page === "records" ? "page" : undefined}
+            >
+              个人记录
+            </a>
+          </nav>
           <div className="account">
             {user ? (
               <>
@@ -356,162 +325,73 @@ export function App() {
               </>
             )}
           </div>
-        </header>
-        <main className="main-content">
-          {notice && (
-            <div className="notice" role="status">
-              <span>{notice}</span>
-              <button
-                className="icon-button"
-                onClick={() => setNotice("")}
-                aria-label="关闭提示"
-              >
-                <Icon name="close" size={16} />
-              </button>
-            </div>
-          )}
-          {page === "home" ? (
-            <Home user={user} onLogin={openLogin} />
-          ) : page === "records" ? (
-            <Records
-              user={user}
-              revision={revision}
-              onLogin={openLogin}
-              onError={onError}
-              onUser={setUser}
-            />
-          ) : (
-            <Training
-              user={user}
-              onLogin={openLogin}
-              onUser={setUser}
-              onError={onError}
-              onSaved={savedCallback}
-              onAbortNotice={abortNotice}
-            />
-          )}
-          <footer className="page-footer">
-            <span>BrainGym</span>
-            <span>专注当下，记录每一次练习。</span>
-          </footer>
-        </main>
-      </div>
+        </div>
+      </header>
+      <main className="main-content" id="main-content" tabIndex={-1}>
+        {notice && (
+          <div className="notice" role="status">
+            <span>{notice}</span>
+            <button
+              className="icon-button"
+              onClick={() => setNotice("")}
+              aria-label="关闭提示"
+            >
+              <Icon name="close" size={16} />
+            </button>
+          </div>
+        )}
+        {page === "home" ? (
+          <Home />
+        ) : page === "records" ? (
+          <Records
+            user={user}
+            revision={revision}
+            onLogin={openLogin}
+            onError={onError}
+            onUser={setUser}
+          />
+        ) : (
+          <Training
+            user={user}
+            onLogin={openLogin}
+            onUser={setUser}
+            onError={onError}
+            onSaved={savedCallback}
+            onAbortNotice={abortNotice}
+          />
+        )}
+      </main>
       {login && <Login onClose={closeLogin} onLogin={authenticated} />}
     </div>
   );
 }
 
-function Home({ user, onLogin }: { user: User | null; onLogin: () => void }) {
+function Home() {
   return (
     <>
-      <section className="welcome">
-        <div>
-          <div className="eyebrow">
-            <span className="status-dot" /> READY WHEN YOU ARE
-          </div>
-          <h1>
-            给大脑，留一段
-            <br />
-            <em>专注时间。</em>
-          </h1>
-          <p>
-            从一局小小的挑战开始。观察、记忆、判断，
-            <br className="desktop-break" />
-            按自己的节奏，完成今天的练习。
-          </p>
-        </div>
-        <div className="welcome-art" aria-hidden="true">
-          <div className="orbit orbit-one" />
-          <div className="orbit orbit-two" />
-          <span className="orbit-point" />
-          <div className="art-center">
+      <div className="home-heading">
+        <h1>训练大厅</h1>
+        <p>选一个游戏，开始练习。</p>
+      </div>
+      <section className="games-grid" aria-label="游戏列表">
+        <article className="game-card" aria-labelledby="n-back-title">
+          <div className="game-card-icon">
             <MiniGrid />
           </div>
-          <span className="art-label">F O C U S</span>
-        </div>
-      </section>
-      <div className="section-heading">
-        <h2>选择你的训练</h2>
-        <span>从记忆力开始</span>
-      </div>
-      <div className="home-columns">
-        <article className="game-card">
-          <div className="game-card-top">
-            <span className="tag">工作记忆</span>
-            <span className="available">
-              <span className="status-dot" />
-              已开放
+          <h2 id="n-back-title">空间 N-back</h2>
+          <p className="game-description">记住位置，判断是否与 N 步前相同。</p>
+          <div className="game-meta">
+            <span>
+              <Icon name="clock" size={16} />约 80 秒
             </span>
+            <span>1～5 级难度</span>
           </div>
-          <div className="game-visual">
-            <MiniGrid />
-            <span className="visual-line" />
-            <span className="visual-copy">还记得 N 步前的位置吗？</span>
-          </div>
-          <div className="game-card-content">
-            <span className="overline">SPATIAL N-BACK</span>
-            <h2>空间 N-back</h2>
-            <p>
-              追踪九宫格中的位置变化，
-              <br />
-              判断它是否与 N 步前相同。
-            </p>
-            <div className="game-meta">
-              <span>
-                <Icon name="clock" size={15} />约 80 秒 / 局
-              </span>
-              <span>1～5 级难度</span>
-            </div>
-            <button className="primary card-start" onClick={() => go("n-back")}>
-              开始训练
-              <Icon name="arrow" size={18} />
-            </button>
-          </div>
+          <button className="primary card-start" onClick={() => go("n-back")}>
+            开始训练
+            <Icon name="arrow" size={18} />
+          </button>
         </article>
-        <div className="home-side">
-          <section className="guide-card">
-            <div className="section-heading">
-              <h3>三步，进入状态</h3>
-              <Icon name="help" size={19} />
-            </div>
-            {[
-              ["观察", "记住亮起的格子位置"],
-              ["回想", "回想 N 步之前的位置"],
-              ["判断", "相同就点匹配，不同不操作"],
-            ].map(([title, text], i) => (
-              <div className="guide-step" key={title}>
-                <span>0{i + 1}</span>
-                <div>
-                  <strong>{title}</strong>
-                  <p>{text}</p>
-                </div>
-              </div>
-            ))}
-          </section>
-          <section className="journal-card">
-            <div className="journal-icon">
-              <Icon name="chart" size={23} />
-            </div>
-            <h3>{user ? "每一次练习，都有迹可循" : "让练习，留下记录"}</h3>
-            <p>
-              {user
-                ? "查看各难度最佳成绩，回顾自己的训练历史。"
-                : "游客可直接试玩。登录后，保存每局成绩，回顾自己的训练历程。"}
-            </p>
-            <button
-              className="text-link"
-              onClick={user ? () => go("records") : onLogin}
-            >
-              {user ? "查看个人记录" : "登录并记录"}
-              <Icon name="arrow" size={16} />
-            </button>
-          </section>
-        </div>
-      </div>
-      <div className="bottom-note">
-        <Icon name="check" size={17} />
-        <span>无需声音，随时开始。每一局，都是属于自己的练习。</span>
-      </div>
+      </section>
     </>
   );
 }

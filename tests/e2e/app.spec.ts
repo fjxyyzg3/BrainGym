@@ -73,7 +73,7 @@ test("desktop guest completes a real game; login on result does not upload it", 
   });
   await page.goto(basePath);
   await expect(
-    page.getByRole("heading", { name: /给大脑，留一段\s*专注时间。/ }),
+    page.getByRole("heading", { name: "训练大厅", exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: join(screenshotDirectory, "desktop.png"),

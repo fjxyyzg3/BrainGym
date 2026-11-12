@@ -205,6 +205,7 @@ function Login({
 export function App() {
   const [page, setPage] = useState<Page>(currentPage),
     [user, setUser] = useState<User | null>(null),
+    [offline, setOffline] = useState(!navigator.onLine),
     [loading, setLoading] = useState(true),
     [login, setLogin] = useState(false),
     [notice, setNotice] = useState(""),
@@ -213,8 +214,10 @@ export function App() {
     try {
       const data = await api<{ user: User }>("me");
       setUser(data.user);
+      setOffline(false);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) setUser(null);
+      if (err instanceof ApiError) setOffline(err.code === "NETWORK_ERROR");
     } finally {
       setLoading(false);
     }
@@ -227,13 +230,19 @@ export function App() {
     };
     window.addEventListener("hashchange", change);
     window.addEventListener("focus", focus);
+    window.addEventListener("online", focus);
+    const disconnected = () => setOffline(true);
+    window.addEventListener("offline", disconnected);
     return () => {
       window.removeEventListener("hashchange", change);
       window.removeEventListener("focus", focus);
+      window.removeEventListener("online", focus);
+      window.removeEventListener("offline", disconnected);
     };
   }, [refresh]);
   const onError = useCallback(
     (err: unknown) => {
+      if (err instanceof ApiError) setOffline(err.code === "NETWORK_ERROR");
       if (
         err instanceof ApiError &&
         (err.status === 401 || err.code === "IDENTITY_CONFLICT")
@@ -260,9 +269,14 @@ export function App() {
   };
   const authenticated = (next: User) => {
     setUser(next);
+    setOffline(false);
     setRevision((x) => x + 1);
     setNotice(`欢迎，${next.name}`);
   };
+  const verifiedUser = useCallback((next: User | null) => {
+    setUser(next);
+    setOffline(false);
+  }, []);
   return (
     <div className="app-shell">
       <a
@@ -328,6 +342,11 @@ export function App() {
         </div>
       </header>
       <main className="main-content" id="main-content" tabIndex={-1}>
+        {offline && (
+          <div className="warning" role="status">
+            当前无法连接服务器。游客练习不保存成绩，登录和个人记录需要联网。
+          </div>
+        )}
         {notice && (
           <div className="notice" role="status">
             <span>{notice}</span>
@@ -348,13 +367,14 @@ export function App() {
             revision={revision}
             onLogin={openLogin}
             onError={onError}
-            onUser={setUser}
+            onUser={verifiedUser}
           />
         ) : (
           <Training
             user={user}
+            offline={offline}
             onLogin={openLogin}
-            onUser={setUser}
+            onUser={verifiedUser}
             onError={onError}
             onSaved={savedCallback}
             onAbortNotice={abortNotice}
@@ -405,6 +425,7 @@ interface Outcome {
 }
 function Training({
   user,
+  offline,
   onLogin,
   onUser,
   onError,
@@ -412,6 +433,7 @@ function Training({
   onAbortNotice,
 }: {
   user: User | null;
+  offline: boolean;
   onLogin: () => void;
   onUser: (user: User | null) => void;
   onError: (err: unknown) => void;
@@ -507,14 +529,22 @@ function Training({
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [mode, respond]);
-  const start = async () => {
+  const start = async (asGuest = false) => {
     setStarting(true);
     setError("");
     try {
       let current: User | null = null;
-      if (user) {
-        current = (await api<{ user: User }>("me")).user;
-        onUser(current);
+      if (!asGuest) {
+        try {
+          current = (await api<{ user: User }>("me")).user;
+          onUser(current);
+        } catch (err) {
+          // An anonymous online guest is valid; a network failure never is
+          // permission to silently downgrade an unverified or signed-in user.
+          if (!(err instanceof ApiError && err.status === 401 && !user))
+            throw err;
+          onUser(null);
+        }
       }
       if (!alive.current) return;
       owner.current = current;
@@ -798,6 +828,20 @@ function Training({
               )}
             </p>
           </div>
+          {offline && (
+            <div className="offline-choice">
+              <p className="warning-text">
+                无法联网验证身份。选择游客练习后，本局不保存，恢复联网也不会补传。
+              </p>
+              <button
+                className="secondary"
+                disabled={starting}
+                onClick={() => void start(true)}
+              >
+                以游客身份练习
+              </button>
+            </div>
+          )}
           <p className="warning-text">切后台、锁屏或中途退出，本局作废。</p>
           {error && (
             <p className="error" role="alert">

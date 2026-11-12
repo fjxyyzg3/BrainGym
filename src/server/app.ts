@@ -2,13 +2,14 @@ import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import rateLimit from "@fastify/rate-limit";
 import staticFiles from "@fastify/static";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Store } from "./store.js";
 import { parseResult } from "./store.js";
 import { AppError } from "./errors.js";
 import { normalizeBasePath } from "../shared/paths.js";
 import { loginClientIp } from "./client-ip.js";
+import { pwaManifest } from "./pwa.js";
 export async function buildApp(options: {
   store: Store;
   origin: string;
@@ -123,6 +124,21 @@ export async function buildApp(options: {
     return { items: store.bests(user.id), user };
   });
   if (options.staticRoot) {
+    const workerPath = join(options.staticRoot, "sw.js");
+    const worker = existsSync(workerPath)
+      ? readFileSync(workerPath, "utf8")
+      : null;
+    app.get(`${basePath}manifest.webmanifest`, async (_req, reply) =>
+      reply
+        .type("application/manifest+json")
+        .header("Cache-Control", "no-cache")
+        .send(pwaManifest(basePath)),
+    );
+    app.get(`${basePath}sw.js`, async (_req, reply) => {
+      reply.header("Cache-Control", "no-cache");
+      if (worker === null) return reply.code(404).send({ error: "资源不存在" });
+      return reply.type("text/javascript").send(worker);
+    });
     const html = readFileSync(join(options.staticRoot, "index.html"), "utf8")
       .replace(/(<base\s+href=")[^"]*(")/, `$1${basePath}$2`)
       .replace(

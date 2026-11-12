@@ -1,8 +1,10 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import { normalizeBasePath } from "../src/shared/paths.js";
+import { preparePwaVerification } from "./prepare-pwa-verification";
 
 export default async function setup() {
+  await preparePwaVerification();
   const port = process.env.E2E_PORT ?? "3100",
     origin = `http://127.0.0.1:${port}`;
   const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);

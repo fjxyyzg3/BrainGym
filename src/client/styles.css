@@ -83,6 +83,9 @@ p {
 }
 .app-shell {
   min-height: 100svh;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .skip-link {
   position: absolute;
@@ -99,6 +102,7 @@ p {
   transform: none;
 }
 .topbar {
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--paper);
   border-bottom: 1px solid var(--line);
 }
@@ -895,12 +899,18 @@ tr:last-child td {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top, 0px))
+    max(20px, env(safe-area-inset-right, 0px))
+    max(20px, env(safe-area-inset-bottom, 0px))
+    max(20px, env(safe-area-inset-left, 0px));
 }
 .modal {
   width: 410px;
   max-width: 100%;
-  max-height: calc(100svh - 40px);
+  max-height: calc(
+    100dvh - 40px - env(safe-area-inset-top, 0px) -
+      env(safe-area-inset-bottom, 0px)
+  );
   overflow-y: auto;
   border: 1px solid var(--line);
   border-radius: 16px;

@@ -9,3 +9,9 @@ playwright-report
 docs
 tests
 .docker-local
+.worktree
+.agents
+.claude
+.codex
+.aws
+.skill-source-lock.json

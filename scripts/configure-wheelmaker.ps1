@@ -1,8 +1,17 @@
 param(
   [string]$StateDir = (Join-Path $env:USERPROFILE '.wheelmaker'),
+  [string]$AppOrigin = $env:APP_ORIGIN,
   [switch]$Apply
 )
 $ErrorActionPreference = 'Stop'
+[Uri]$publicOrigin = $null
+if ([string]::IsNullOrWhiteSpace($AppOrigin) -or
+    -not [Uri]::TryCreate($AppOrigin, [UriKind]::Absolute, [ref]$publicOrigin) -or
+    $publicOrigin.Scheme -cne 'https' -or
+    $publicOrigin.UserInfo -ne '' -or
+    $AppOrigin -cne $publicOrigin.GetLeftPart([UriPartial]::Authority)) {
+  throw 'AppOrigin must be configured as an HTTPS origin without credentials, path, query or fragment'
+}
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $hubHome = [IO.Path]::GetFullPath($StateDir)
 $nodeExecutable = (Get-Command node -CommandType Application | Select-Object -First 1).Source
@@ -12,7 +21,7 @@ $definition = [ordered]@{
   args=@('dist/server/server/main.js'); cwd=$repositoryRoot
   env=[ordered]@{
     HOST='127.0.0.1'; PORT='3001'; APP_BASE_PATH='/braingym/'
-    APP_ORIGIN='https://apps.example.com'; COOKIE_SECURE='true'; NODE_ENV='production'
+    APP_ORIGIN=$AppOrigin; COOKIE_SECURE='true'; NODE_ENV='production'
     DATABASE_PATH=(Join-Path $repositoryRoot 'data/braingym.sqlite')
     WHEELMAKER_STATE_DIR=$hubHome; WHEELMAKER_SERVICE_ID='braingym'
   }

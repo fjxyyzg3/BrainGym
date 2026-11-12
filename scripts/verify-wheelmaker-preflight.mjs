@@ -4,7 +4,11 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import assert from "node:assert/strict";
+import { homedir } from "node:os";
+import { requirePublicOrigin } from "./wheelmaker-origin.mjs";
 
+const origin = requirePublicOrigin(process.env.APP_ORIGIN);
+const publicUrl = `${origin}/braingym/`;
 const fixture = JSON.parse(
   readFileSync(resolve("data/wheelmaker-verification/private.json"), "utf8"),
 );
@@ -25,12 +29,13 @@ const child = spawn(process.execPath, ["dist/server/server/main.js"], {
     HOST: "127.0.0.1",
     PORT: String(port),
     APP_BASE_PATH: "/braingym/",
-    APP_ORIGIN: "https://apps.example.com",
+    APP_ORIGIN: origin,
     COOKIE_SECURE: "true",
     NODE_ENV: "production",
     DATABASE_PATH: fixture.databasePath,
     WHEELMAKER_APP_MANAGED: "1",
-    WHEELMAKER_STATE_DIR: "C:/Users/fjxyy/.wheelmaker",
+    WHEELMAKER_STATE_DIR:
+      process.env.WHEELMAKER_STATE_DIR ?? resolve(homedir(), ".wheelmaker"),
     WHEELMAKER_SERVICE_ID: "braingym",
   },
 });
@@ -63,17 +68,15 @@ try {
   const deadline = Date.now() + 30000;
   while (
     Date.now() < deadline &&
-    (!ready ||
-      !stderr.includes("Forwarding ready: https://apps.example.com/braingym/"))
+    (!ready || !stderr.includes(`Forwarding ready: ${publicUrl}`))
   ) {
     if (child.exitCode !== null)
-      throw new Error(`Preflight process exited: ${stderr.slice(-600)}`);
+      throw new Error("Preflight process exited before publication");
     await delay(100);
   }
   assert.ok(
-    ready &&
-      stderr.includes("Forwarding ready: https://apps.example.com/braingym/"),
-    `Publication not ready: ${stderr.slice(-600)}`,
+    ready && stderr.includes(`Forwarding ready: ${publicUrl}`),
+    "Publication not ready; inspect private Hub diagnostics",
   );
   const verification = spawn(
     process.execPath,

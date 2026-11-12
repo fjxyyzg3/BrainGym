@@ -1,5 +1,7 @@
 # WheelMaker 接入验收记录
 
+隐私说明：本文保留当时的验收结果，域名已替换为保留示例，不代表示例地址经过公网验收。两张含真实入口的 Monitor 截图已移出跟踪文件，原件仅保留在本机忽略目录 `data/security-audit/private-screenshots/`；历史暴露范围见[生产入口清理记录](production-entry-cleanup.md)。
+
 验证日期：2026-11-12。依据为[已批准 spec](../scope/2026-11-12-wheelmaker-integration.md)，实现计划见[实施计划](../plans/2026-11-12-wheelmaker-integration/plan-wheelmaker-integration.md)。
 
 运行接入验收通过：正式 Monitor/Forwarding 就绪，Stop/Start、日志和重启后的完整 HTTPS 业务均已核验。验收时 Node 根进程 PID 为 14036，由本机 Hub PID 30908 直接托管，target 为 `http://127.0.0.1:3001`，公网入口为 `https://apps.example.com/braingym/`。用户已批准托管改用 3001，保留占用 3000 的现有 Docker 服务；spec、脚本和正式定义一致。
@@ -73,13 +75,13 @@
 
 正式定义已写入当前用户的 `.wheelmaker/config.json`，ID 为 `braingym-process`，使用绝对 Node 路径和本仓库 cwd，沿用 `data/braingym.sqlite`。端口调整前另建了同权限备份；只读对比确认整个配置仅本条 `PORT` 从 3000 变为 3001，公网 Origin 和路径未变，备份与主配置 ACL 相同。仓库不保存完整 Hub 配置、认证材料或正式数据库。
 
-用户手动 Reload 后的[客户端截图](screenshots/wheelmaker-monitor-ready.png)显示 Monitor 中 BrainGym ready、PID 7472，Forwarding 中 braingym ready、target 为 3001 且公网 URL 正确。只读进程检查确认 3001 listener 属于直接执行构建入口的 Node PID 7472，父进程为正式 WheelMaker Hub PID 30908。本机及真实 HTTPS health、页面、前缀脚本加载通过，未登录 `/api/me` 返回 401。
+用户手动 Reload 后的客户端截图（含入口原件仅在本机私有保存）显示 Monitor 中 BrainGym ready、PID 7472，Forwarding 中 braingym ready、target 为 3001 且公网 URL 正确。只读进程检查确认 3001 listener 属于直接执行构建入口的 Node PID 7472，父进程为正式 WheelMaker Hub PID 30908。本机及真实 HTTPS health、页面、前缀脚本加载通过，未登录 `/api/me` 返回 401。
 
 为正式 Stop/Start 验收，通过 `prepare-wheelmaker-verification.mjs --formal-restart` 在停止前创建了本版临时身份和历史。该身份用于验证重启保留，与升级前创建并已清理的身份分开记录。
 
 用户确认已 Stop 且未 Start 后，只读核对 PID 7472 已消失、3001 已释放、本机连接被拒绝，实际公网页面与 health 均返回 404，证明映射撤销。原有数据指纹不变，本轮临时凭据与历史仍保留。本次未捕获正式进程退出码；退出码 0 的证据来自真实子进程、隔离 Hub 和临时控制进程测试，不能表述为已观察到正式 Stop 的退出码。
 
-用户 Start 后提供的[本应用日志截图](screenshots/wheelmaker-monitor-logs.png)显示两次不同的 instanceId，以及两次正确的 3001 listener 和公网 ready。新 Node PID 为 14036，父进程仍为 Hub PID 30908。真实公网使用停止前的同一 Token 登录、读取原临时历史、完成新对局并保存、读取历史和最佳、检查 Secure Cookie 及退出均通过；转发头清洗和资源路径也通过。[正式实例对局截图](screenshots/wheelmaker-formal-public.png)未包含 Token。
+用户 Start 后提供的本应用日志截图（含入口原件仅在本机私有保存）显示两次不同的 instanceId，以及两次正确的 3001 listener 和公网 ready。新 Node PID 为 14036，父进程仍为 Hub PID 30908。真实公网使用停止前的同一 Token 登录、读取原临时历史、完成新对局并保存、读取历史和最佳、检查 Secure Cookie 及退出均通过；转发头清洗和资源路径也通过。[正式实例对局截图](screenshots/wheelmaker-formal-public.png)未包含 Token。
 
 本轮验证已按临时身份精确删除会话、凭据、成绩和用户，凭据文件已删除。原有用户、凭据摘要和成绩指纹保持不变，数据库仍为 schema 1、1 名原有用户、1 条原有成绩。清理后正式 HTTPS health 仍为 200/ok，正式服务保持运行。
 

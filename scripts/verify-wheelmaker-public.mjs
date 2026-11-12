@@ -3,8 +3,9 @@ import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { chromium, expect } from "@playwright/test";
+import { requirePublicOrigin } from "./wheelmaker-origin.mjs";
 
-const origin = "https://apps.example.com",
+const origin = requirePublicOrigin(process.env.APP_ORIGIN),
   basePath = "/braingym/";
 const privatePath = resolve("data/wheelmaker-verification/private.json");
 const fixture = JSON.parse(readFileSync(privatePath, "utf8"));
@@ -220,7 +221,7 @@ try {
     JSON.stringify(result, null, 2),
   );
   unlinkSync(privatePath);
-  console.log(JSON.stringify(result));
+  console.log(JSON.stringify({ ...result, publicUrl: "[private]" }));
 } catch (error) {
   // Do not log Playwright action arguments, which may contain the test Token.
   console.error(`Public verification failed at ${stage} (${error.name})`);

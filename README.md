@@ -21,9 +21,9 @@ npm start
 
 ## WheelMaker 托管
 
-构建后，运行 `./scripts/configure-wheelmaker.ps1` 预览当前 Windows Hub 的 BrainGym 定义；加上 `-Apply` 后会备份并合并该定义。随后在桌面客户端的当前 Hub 中 Reload Monitor，确认 BrainGym 就绪并检查 Forwarding。
+构建后，先从私有部署配置设置当前终端的 `APP_ORIGIN`，再运行 `./scripts/configure-wheelmaker.ps1` 预览当前 Windows Hub 的 BrainGym 定义；也可通过 `-AppOrigin` 显式传入该值。入口必须是无路径、查询参数、fragment 或凭据的 HTTPS origin，缺失或无效时脚本直接退出。加上 `-Apply` 后会备份并合并该定义。随后在桌面客户端的当前 Hub 中 Reload Monitor，确认 BrainGym 就绪并检查 Forwarding。
 
-托管入口为 **https://apps.example.com/braingym/**，回环服务为 `http://127.0.0.1:3001`。Hub 直接托管 Node 根进程，沿用 `data/braingym.sqlite`。同一份构建根据 `APP_BASE_PATH` 支持普通运行的 `/` 和托管运行的 `/braingym/`。
+托管入口为私有 `APP_ORIGIN` 加 `/braingym/`，回环服务为 `http://127.0.0.1:3001`。Hub 直接托管 Node 根进程，沿用 `data/braingym.sqlite`。同一份构建根据 `APP_BASE_PATH` 支持普通运行的 `/` 和托管运行的 `/braingym/`。仓库中的 `apps.example.com` 等域名仅为保留示例，不能作为实际部署值；真实入口与含入口的原始证据不入库。
 
 完整的加载、更新、故障处理和信任边界见 [WheelMaker 运维步骤](docs/wiki/operations.md#接入-wheelmaker)。实际完成情况见 [WheelMaker 验收记录](docs/verification/wheelmaker-integration.md)；配置合并后仍需检查 Monitor 和真实公网业务。
 

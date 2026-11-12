@@ -31,7 +31,7 @@ flowchart LR
     Monitor["Hub Monitor"] -->|"stdio 控制"| Node["Node 根进程"]
     Node --> Http["HTTP 与 SQLite"]
     Node -->|"持续 IPC 注册"| Forwarding["Hub Forwarding"]
-    Browser["公网浏览器"] --> Edge["apps.example.com"]
+    Browser["公网浏览器"] --> Edge["私有配置的 HTTPS 入口"]
     Edge -->|"隧道请求"| Http
 ```
 
@@ -41,11 +41,11 @@ flowchart LR
 
 ## 身份与代理信任边界
 
-个人 Token 换取固定 7 天的会话。Token 与会话均使用 32 字节安全随机值，数据库只保存 SHA-256 摘要。Cookie 为 HttpOnly、SameSite=Strict，Secure 属性由运行配置控制，托管 HTTPS 定义设置 `COOKIE_SECURE=true` 和 `Path=/braingym/`，退出按相同路径清除。所有写接口要求 Origin 与 `APP_ORIGIN` 一致；托管定义仅接受 `https://apps.example.com`，本机 HTTP 用于健康探测。API 响应不缓存，服务日志不记录请求正文、Cookie 或凭据。
+个人 Token 换取固定 7 天的会话。Token 与会话均使用 32 字节安全随机值，数据库只保存 SHA-256 摘要。Cookie 为 HttpOnly、SameSite=Strict，Secure 属性由运行配置控制，托管 HTTPS 定义设置 `COOKIE_SECURE=true` 和 `Path=/braingym/`，退出按相同路径清除。所有写接口要求 Origin 与 `APP_ORIGIN` 一致；托管定义仅接受私有配置的 HTTPS origin，本机 HTTP 用于健康探测。API 响应不缓存，服务日志不记录请求正文、Cookie 或凭据。
 
 登录频率限制为每个 IP 每分钟最多 20 次，失败 Token 也计入额度。普通模式按直连对端限流，不信任客户端转发头。托管模式只信任即时对端为 IPv4 回环 `127.0.0.1`、且原始请求中恰有一个 `X-Forwarded-For` 的单 IP 值；IPv4/IPv6 等价表示归一到同一额度。缺失、重复、多地址、非法或回环客户端地址及不受信任对端均返回 `503/CLIENT_IP_UNAVAILABLE`，不回退到共享额度。来源校验在限流之前独立执行。
 
-该代理契约依赖网关覆盖客户端提供的转发头，并信任本机进程及有权访问 Hub IPC 的用户。本部署已确认 `apps.example.com` 下的应用均可信、发布权限受控。路径前缀、Cookie Path 和 SameSite 不提供同 Origin 应用之间的隔离；引入不可信应用需要重新设计独立 Origin。
+该代理契约依赖网关覆盖客户端提供的转发头，并信任本机进程及有权访问 Hub IPC 的用户。本部署依赖同 Origin 应用均可信、发布权限受控的已确认前提。路径前缀、Cookie Path 和 SameSite 不提供同 Origin 应用之间的隔离；引入不可信应用需要重新设计独立 Origin。
 
 ## 私人成绩的数据流
 

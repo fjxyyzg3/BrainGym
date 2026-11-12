@@ -44,20 +44,25 @@ npm run cli -- token:issue <user-id>
 ```powershell
 npm ci
 npm run build
+# 先从私有部署配置设置当前终端的 APP_ORIGIN，再生成定义。
 ./scripts/configure-wheelmaker.ps1
 ```
 
-查看输出中指定的定义预览，核对 Node 绝对路径、仓库目录和数据库路径。脚本默认使用当前用户的 `.wheelmaker`；自定义 Hub 状态目录时，预览和应用均传入相同的 `-StateDir`。
+脚本从当前进程的 `APP_ORIGIN` 读取私有 HTTPS origin，也可传入 `-AppOrigin`；两者都未提供或值含路径、查询参数、fragment、凭据时，在生成预览或修改 Hub 前拒绝执行。PowerShell 不自动读取 `.env`。文中的 `apps.example.com`、`registry.example.com` 仅为保留示例，不代表实际部署或可访问入口。
 
-1. 执行 `./scripts/configure-wheelmaker.ps1 -Apply`。脚本在状态目录 `.tmp` 下建立与原配置 ACL 相同的备份，再原子替换 `config.json`；它只合并 `braingym-process`，保留其他配置，并输出备份位置。
+查看输出中指定的定义预览，核对 Node 绝对路径、仓库目录和数据库路径。预览含私有入口，保存在忽略目录 `data/wheelmaker-verification/`，不要提交或粘贴到公开报告。脚本默认使用当前用户的 `.wheelmaker`；自定义 Hub 状态目录时，预览和应用均传入相同的 `-StateDir`。
+
+1. 沿用预览时相同的 `APP_ORIGIN` 或 `-AppOrigin` 及 `-StateDir`，加上 `-Apply` 执行配置合并。脚本在状态目录 `.tmp` 下建立与原配置 ACL 相同的备份，再原子替换 `config.json`；它只合并 `braingym-process`，保留其他配置，并输出备份位置。
 2. 在 WheelMaker 桌面客户端选择当前 Windows Hub，进入 Monitor，执行 **Reload**。
 3. 确认 BrainGym 为 ready，PID 对应实际 Node 根进程，并能查看 stderr 启动日志。
-4. 检查 Forwarding 条目 `braingym` 为 ready，target 为 `http://127.0.0.1:3001`，公网 URL 为 `https://apps.example.com/braingym/`。
+4. 检查 Forwarding 条目 `braingym` 为 ready，target 为 `http://127.0.0.1:3001`，公网 URL 为私有 `APP_ORIGIN` 加 `/braingym/`。
 5. 打开公网 URL，验证页面、Token 登录、成绩与退出。仅有 Forwarding ready 不能证明业务验收通过。
 
-脚本生成的定义直接使用 `node.exe`、参数 `dist/server/server/main.js`，cwd 为仓库目录。不要将 `npm` 或 shell 作为托管根进程。固定环境为 `HOST=127.0.0.1`、`PORT=3001`、`APP_BASE_PATH=/braingym/`、`APP_ORIGIN=https://apps.example.com`、`COOKIE_SECURE=true`、`NODE_ENV=production`，以及绝对 `DATABASE_PATH`、`WHEELMAKER_STATE_DIR` 和 `WHEELMAKER_SERVICE_ID=braingym`。`WHEELMAKER_APP_MANAGED` 由 Hub 注入。
+脚本生成的定义直接使用 `node.exe`、参数 `dist/server/server/main.js`，cwd 为仓库目录。不要将 `npm` 或 shell 作为托管根进程。固定环境为 `HOST=127.0.0.1`、`PORT=3001`、`APP_BASE_PATH=/braingym/`、`COOKIE_SECURE=true`、`NODE_ENV=production`，以及绝对 `DATABASE_PATH`、`WHEELMAKER_STATE_DIR` 和 `WHEELMAKER_SERVICE_ID=braingym`；`APP_ORIGIN` 使用上述私有输入。`WHEELMAKER_APP_MANAGED` 由 Hub 注入。
 
-Registry 地址为 `https://registry.example.com`，Apps 公网入口为 `https://apps.example.com`。BrainGym 通过本机 IPC 发布，不需要 Registry 密码或 Token。普通命令行启动时，不要注入控制协议；本机可用 `http://127.0.0.1:3001/braingym/api/health` 探测健康，登录和写入使用公网 HTTPS。
+Registry 地址由私有 Hub 配置维护，BrainGym 通过本机 IPC 发布，不需要 Registry 密码或 Token。普通命令行启动时，不要注入控制协议；本机可用 `http://127.0.0.1:3001/braingym/api/health` 探测健康，登录和写入使用公网 HTTPS。
+
+公网预检与验收脚本 `verify-wheelmaker-preflight.mjs`、`verify-wheelmaker-public.mjs` 同样要求进程环境提供有效 HTTPS `APP_ORIGIN`，并在读取验证身份或发起连接前校验；可通过 `node --env-file=.env scripts/verify-wheelmaker-public.mjs` 加载自行维护且未跟踪的 `.env`。预检的 `WHEELMAKER_STATE_DIR` 默认取当前用户的 `.wheelmaker`，自定义时从进程环境传入。运行前按验收记录准备临时身份；这些脚本会访问真实入口并清理该临时身份，不是普通测试命令。含实际 URL 的机器报告仅保存到忽略目录，控制台结果隐藏 URL，公开截图须先检查入口和凭据。
 
 该部署依赖同 Origin 应用可信、发布权限受控，以及网关正确清洗转发头。Cookie Path 和路径前缀不隔离同域应用；完整条件见 [身份与代理信任边界](architecture.md#身份与代理信任边界)。
 

@@ -5,9 +5,11 @@
 
 # BrainGym 接入 WheelMaker Monitor 与 Forwarding
 
+隐私说明：本文中的域名已替换为保留示例，私有接入指南链接已移除；真实部署值由私有配置维护，原批准范围和业务要求不变。
+
 ## 目标
 
-让当前 Windows 机器上的 BrainGym 由 WheelMaker Hub 启停、监控健康并收集日志，同时通过现有 Apps 入口稳定访问完整业务。接入遵循 [WheelMaker Monitor 和 Forwarding 接入指南](https://share.example.com/private-guide)，保留已有训练数据和普通本地、开发及 Docker 使用方式。
+让当前 Windows 机器上的 BrainGym 由 WheelMaker Hub 启停、监控健康并收集日志，同时通过现有 Apps 入口稳定访问完整业务。接入遵循已确认的 WheelMaker Monitor 和 Forwarding 私有接入指南，保留已有训练数据和普通本地、开发及 Docker 使用方式。
 
 ## 决策基线
 

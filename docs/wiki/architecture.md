@@ -1,4 +1,4 @@
-> 摘要：BrainGym 的模块、双路径运行、WheelMaker 生命周期及身份和代理信任边界。
+> 摘要：BrainGym 的模块、双路径运行、PWA 公共外壳缓存、WheelMaker 生命周期及身份和代理信任边界。
 
 # 架构与数据边界
 
@@ -38,6 +38,20 @@ flowchart LR
 核心就绪取决于 HTTP listener 和 SQLite，Forwarding 的发布结果独立于核心健康。IPC 不可用时根进程保持运行，注册按 1、2、4 秒递增退避，最高 30 秒。建连及首个完整响应各有 5 秒期限；成功注册后没有空闲超时。每次重连重置版本基线，旧版本或重复状态不覆盖新状态。
 
 健康检查通过短时读写事务探测数据库可用性，锁等待上限为 250 ms；托管业务连接的 busy timeout 也为 250 ms。健康状态变化时发送完整快照，恢复后清除旧诊断。shutdown、stdin EOF 和终止信号共用一次关闭流程，撤销注册、排空 HTTP 并关闭 SQLite；10 秒后仍未结束则强制退出，早于 Hub 的 15 秒期限。整个 Hub 重启后由保存的定义启动新实例，instanceId 随实例变化。
+
+## PWA 外壳与离线身份
+
+`scripts/pwa-build.ts` 在 Vite 构建结束时生成 `sw.js`，资源清单只包含产出的 JS/CSS、HTML 和明确列出的图标。发行版本由 HTML、静态资源摘要和 worker 源码计算；HTML 带发行标记。`src/server/pwa.ts` 提供 manifest 数据，`src/server/app.ts` 根据运行时基础路径提供 manifest、worker 和处理过路径的 HTML，因此两个路径共用同一份构建。
+
+`src/pwa/worker.js` 安装时先下载整套资源，校验媒体类型、内容摘要及 HTML 的发行标记与基础路径，全部有效后才写入新版本缓存。HTML 摘要校验前仅将基础路径归一到构建模板的根路径。活动版只为入口/index 导航和清单内的静态资源提供缓存；API、非 GET、查询参数、跨 Origin、未知路径及 Range 请求保持网络语义，不写运行时缓存。
+
+缓存名为 `braingym:pwa:<编码后的基础路径>:<内容版本>`。新版准备完成后遵循浏览器默认等待机制，不调用 `skipWaiting()`、不抢占页面或强制刷新。全部旧页面关闭后才激活新 worker，并只清理同一应用、同一基础路径的旧缓存。缓存名称避免误删其他应用的数据，不隔离同 Origin 应用的访问权限。
+
+`src/client/pwa.ts` 只在生产构建注册 worker；注册失败不阻止在线界面，窗口获得焦点或恢复网络时检查更新。首次缓存或存储失败时不提供离线保证，后续重新打开可再次准备。开发模式不注册新 worker；同 Origin 下已存在的生产 worker 不会被自动注销。
+
+React 将网络故障与 401/身份冲突分开处理。普通开局重新请求当前身份；无法联网时必须主动选择游客，不能把先前保留的用户信息当作已通过校验。游客选择只影响本局 owner，不清会话 Cookie；网络恢复不改变本局归属。API 的 `no-store` 和服务端会话授权保持不变，私人数据及待保存结果不写入 Cache Storage、localStorage 或 IndexedDB。
+
+来源：[PWA spec](../scope/2026-11-12-pwa-support.md)、[构建插件](../../scripts/pwa-build.ts)、[worker](../../src/pwa/worker.js)、[客户端](../../src/client/App.tsx)、[PWA 验收](../verification/pwa-support.md)。
 
 ## 身份与代理信任边界
 

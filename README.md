@@ -4,6 +4,14 @@
 
 训练大厅中，每个游戏对应一张卡片。选择“开始训练”后查看规则、选择难度并开局；顶部“个人记录”用于查看登录账户的成绩。
 
+## 安装与离线练习
+
+支持 PWA：通过支持安装的 Chrome/Edge 浏览器菜单，或 iPhone/iPad Safari 的“添加到主屏幕”安装；启动后进入训练大厅，页面不额外提示安装。目标平台的实际验收状态见 [PWA 验收记录](docs/verification/pwa-support.md)。
+
+首次需联网完成资源缓存，之后可离线打开并明确选择“以游客身份练习”。离线游客成绩只在当前结果页展示，恢复联网或登录后也不补传；登录、个人记录与成绩保存仍需网络。浏览器清除缓存、首次缓存失败或尚未完成时，离线启动不可用。
+
+新版本在后台准备，不强制刷新；关闭所有 BrainGym 标签页和独立窗口后，下次打开使用已准备的新版本。安装、更新与缓存排查见 [PWA 运维说明](docs/wiki/operations.md#安装与使用-pwa)。
+
 ## 本地启动
 
 需要 Node.js 24 或更高版本。
@@ -56,9 +64,9 @@ npm run cli -- token:issue <user-id>
 ## 验证
 
 ```powershell
-npm test
 npm run typecheck
 npm run build
+npm test
 npx playwright install chromium
 npm run test:e2e
 ```

@@ -2,7 +2,13 @@ import { test as base, expect, chromium, type Page } from "@playwright/test";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { Store } from "../../src/server/store.js";
+import { normalizeBasePath } from "../../src/shared/paths.js";
+
+const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);
+const screenshotDirectory = `test-results/screenshots${basePath === "/" ? "-root" : "-prefix"}`;
+mkdirSync(screenshotDirectory, { recursive: true });
 
 const test = base.extend<{
   accounts: {
@@ -33,7 +39,7 @@ async function login(page: Page, token: string) {
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 async function training(page: Page) {
-  await page.goto("/#n-back");
+  await page.goto(`${basePath}#n-back`);
   await expect(page.getByRole("button", { name: "开始本局" })).toBeVisible();
 }
 const clockPages = new WeakSet<Page>();
@@ -65,13 +71,12 @@ test("desktop guest completes a real game; login on result does not upload it", 
   page.on("request", (req) => {
     if (req.url().endsWith("/api/results")) uploads++;
   });
-  await page.goto("/");
+  await page.goto(basePath);
   await expect(
     page.getByRole("heading", { name: /给大脑，留一段\s*专注时间。/ }),
   ).toBeVisible();
-  mkdirSync("docs/verification/screenshots", { recursive: true });
   await page.screenshot({
-    path: "docs/verification/screenshots/desktop.png",
+    path: join(screenshotDirectory, "desktop.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "开始训练", exact: true }).click();
@@ -88,7 +93,7 @@ test("desktop guest completes a real game; login on result does not upload it", 
   ).toBeVisible();
   expect(uploads).toBe(0);
   await expect(
-    (await page.request.get("/api/history")).json(),
+    (await page.request.get(`${basePath}api/history`)).json(),
   ).resolves.toMatchObject({ total: 0 });
   expect(errors).toEqual([]);
 });
@@ -102,9 +107,9 @@ test.describe("mobile device", () => {
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/");
+    await page.goto(basePath);
     await page.screenshot({
-      path: "docs/verification/screenshots/mobile.png",
+      path: join(screenshotDirectory, "mobile.png"),
       fullPage: true,
     });
     expect(
@@ -127,7 +132,7 @@ test.describe("mobile device", () => {
     ).toBeDisabled();
     expect(await page.evaluate(() => scrollY)).toBe(scroll);
     await page.screenshot({
-      path: "docs/verification/screenshots/mobile-training.png",
+      path: join(screenshotDirectory, "mobile-training.png"),
       fullPage: true,
     });
     await page.getByRole("link", { name: "个人记录", exact: true }).click();
@@ -143,7 +148,7 @@ test("network failure can retry manually; refresh drops pending result", async (
   page,
   accounts,
 }) => {
-  await page.goto("/");
+  await page.goto(basePath);
   await login(page, accounts.a.token);
   await training(page);
   let attempts = 0;
@@ -182,7 +187,7 @@ test("lost response retries idempotently and renders private history and best", 
   page,
   accounts,
 }) => {
-  await page.goto("/");
+  await page.goto(basePath);
   await login(page, accounts.a.token);
   await training(page);
   await page.route("**/api/results", async (route) => {
@@ -195,7 +200,9 @@ test("lost response retries idempotently and renders private history and best", 
   await page.unroute("**/api/results");
   await page.getByRole("button", { name: "重试保存" }).click();
   await expect(page.locator(".save-message")).toContainText("已保存到");
-  const history = await (await page.request.get("/api/history")).json();
+  const history = await (
+    await page.request.get(`${basePath}api/history`)
+  ).json();
   expect(history.total).toBe(1);
   await page.getByRole("button", { name: "查看个人记录" }).click();
   await expect(page.getByText("共 1 局", { exact: true })).toBeVisible();
@@ -206,7 +213,7 @@ test("shared-cookie account switch refuses wrong owner; original user can login 
   context,
   accounts,
 }) => {
-  await page.goto("/");
+  await page.goto(basePath);
   await login(page, accounts.a.token);
   await training(page);
   await page.route("**/api/results", (route) => route.abort("failed"));
@@ -215,31 +222,35 @@ test("shared-cookie account switch refuses wrong owner; original user can login 
   await expect(page.locator(".save-message")).toContainText("未保存");
   await page.unroute("**/api/results");
   const other = await context.newPage();
-  await other.goto("/");
+  await other.goto(basePath);
   await login(other, accounts.b.token);
   await page.bringToFront();
   await page.getByRole("button", { name: "重试保存" }).click();
   await expect(page.locator(".save-message")).toContainText(
     "当前账户与开局账户不同",
   );
-  expect((await (await page.request.get("/api/history")).json()).total).toBe(0);
+  expect(
+    (await (await page.request.get(`${basePath}api/history`)).json()).total,
+  ).toBe(0);
   await page.getByRole("button", { name: "登录开局账户" }).click();
   await page.getByLabel("个人 Token", { exact: true }).fill(accounts.a.token);
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: "重试保存" }).click();
   await expect(page.locator(".save-message")).toContainText("已保存到");
-  expect((await (await page.request.get("/api/history")).json()).total).toBe(1);
+  expect(
+    (await (await page.request.get(`${basePath}api/history`)).json()).total,
+  ).toBe(1);
 });
 test("invalid session preserves completed result and original login can retry", async ({
   page,
   accounts,
 }) => {
-  await page.goto("/");
+  await page.goto(basePath);
   await login(page, accounts.a.token);
   await training(page);
   await start(page);
-  await page.request.post("/api/logout", {
+  await page.request.post(`${basePath}api/logout`, {
     headers: { origin: new URL(page.url()).origin },
     data: {},
   });

@@ -64,11 +64,20 @@ export function parseResult(value: unknown): ResultInput {
 }
 export class Store {
   private db: DatabaseSync;
-  constructor(path: string) {
+  private closed = false;
+  private busyTimeout: number;
+  constructor(path: string, options: { busyTimeoutMs?: number } = {}) {
+    this.busyTimeout = options.busyTimeoutMs ?? 5000;
+    if (
+      !Number.isInteger(this.busyTimeout) ||
+      this.busyTimeout < 1 ||
+      this.busyTimeout > 5000
+    )
+      throw new Error("Invalid SQLite busy timeout");
     if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path);
     this.db.exec(
-      "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;",
+      `PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=${this.busyTimeout};`,
     );
     const version = this.db.prepare("PRAGMA user_version").get()!
       .user_version as number;
@@ -248,7 +257,20 @@ export class Store {
         .all(userId, GAME, VERSION) as unknown as ResultRow[]
     ).map(toResult);
   }
+  assertAvailable(): void {
+    if (this.closed) throw new Error("Storage is closed");
+    this.db.exec("PRAGMA busy_timeout=250");
+    try {
+      this.db.prepare("SELECT id FROM users LIMIT 1").get();
+      this.db.exec("BEGIN IMMEDIATE; ROLLBACK;");
+    } finally {
+      this.db.exec(`PRAGMA busy_timeout=${this.busyTimeout}`);
+    }
+  }
   close(): void {
-    this.db.close();
+    if (!this.closed) {
+      this.db.close();
+      this.closed = true;
+    }
   }
 }

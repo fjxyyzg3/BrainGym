@@ -4,6 +4,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import assert from "node:assert/strict";
 import { Store } from "../dist/server/server/store.js";
+import { normalizeBasePath } from "../dist/server/shared/paths.js";
+
+const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);
 
 // Use raw CDP: Playwright deliberately forces pages to remain visible. This
 // checks the browser's real tab lifecycle without changing document properties.
@@ -69,7 +72,7 @@ try {
       socket.send(JSON.stringify({ id, method, params, sessionId }));
     });
   const { targetId } = await send("Target.createTarget", {
-    url: `${process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000"}/#n-back`,
+    url: `${new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000").origin}${basePath}#n-back`,
   });
   const { sessionId } = await send("Target.attachToTarget", {
     targetId,
@@ -102,7 +105,7 @@ try {
     const account = store.createUser("Native visibility verification");
     store.close();
     const loggedIn = await evaluate(
-      `fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:${JSON.stringify(account.token)}})}).then(r=>r.ok)`,
+      `fetch(${JSON.stringify(`${basePath}api/login`)},{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:${JSON.stringify(account.token)}})}).then(r=>r.ok)`,
     );
     assert.equal(loggedIn, true);
     await send("Page.reload", { ignoreCache: true }, sessionId);

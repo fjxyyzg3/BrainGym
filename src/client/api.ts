@@ -1,3 +1,5 @@
+import { basePath } from "./base-path";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -10,7 +12,7 @@ export class ApiError extends Error {
 export async function api<T>(url: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`/api/${url}`, {
+    response = await fetch(`${basePath}api/${url}`, {
       method: body === undefined ? "GET" : "POST",
       credentials: "same-origin",
       cache: "no-store",

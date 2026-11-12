@@ -15,9 +15,17 @@ npm start
 
 打开 **http://127.0.0.1:3000**。创建命令输出用户 ID 和一次性的明文 Token，请妥善保存；在页面选择“Token 登录”后粘贴 Token。用户与记录默认保存在 `data/braingym.sqlite`，创建用户和启动服务必须使用相同的数据库路径。
 
-`.env.example` 记录可用配置。Node 进程可用 `node --env-file=.env dist/server/server/main.js` 加载自建 `.env`；`npm start` 本身使用进程环境及默认值，不自动读取该文件。
+`.env.example` 记录可用配置。Node 进程可用 `node --env-file=.env dist/server/server/main.js` 加载自行创建的 `.env`；`npm start` 本身使用进程环境及默认值，不自动读取该文件。
 
-开发时开两个终端：`npm run dev` 启动 API（3000），`npm run web` 启动 Vite（默认 5173）。此时将 API 的 `APP_ORIGIN` 设为 `http://127.0.0.1:5173`，从该地址访问前端；浏览器 API 由 Vite 同源代理。
+开发时开两个终端：`npm run dev` 启动 API（3000），`npm run web` 启动 Vite（默认 5173）。此时将 API 的 `APP_ORIGIN` 设为 `http://127.0.0.1:5173`，从该地址访问前端；浏览器的 API 请求由 Vite 同源代理。
+
+## WheelMaker 托管
+
+构建后，运行 `./scripts/configure-wheelmaker.ps1` 预览当前 Windows Hub 的 BrainGym 定义；加上 `-Apply` 后会备份并合并该定义。随后在桌面客户端的当前 Hub 中 Reload Monitor，确认 BrainGym 就绪并检查 Forwarding。
+
+托管入口为 **https://apps.example.com/braingym/**，回环服务为 `http://127.0.0.1:3001`。Hub 直接托管 Node 根进程，沿用 `data/braingym.sqlite`。同一份构建根据 `APP_BASE_PATH` 支持普通运行的 `/` 和托管运行的 `/braingym/`。
+
+完整的加载、更新、故障处理和信任边界见 [WheelMaker 运维步骤](docs/wiki/operations.md#接入-wheelmaker)。实际完成情况见 [WheelMaker 验收记录](docs/verification/wheelmaker-integration.md)；配置合并后仍需检查 Monitor 和真实公网业务。
 
 ## Docker
 
@@ -41,7 +49,7 @@ npm run cli -- token:revoke <user-id>
 npm run cli -- token:issue <user-id>
 ```
 
-`user:create` 同时创建用户并发放 Token。`rotate` 换发并立即使旧 Token 与该用户全部会话失效，历史保留；`revoke` 停止该用户所有登录；`issue` 仅在没有有效 Token 时发放。数据库只保存凭据摘要，无法找回旧明文。容器中的命令前缀替换为 `docker compose exec braingym node dist/server/server/cli.js`。
+`user:create` 同时创建用户并发放 Token。`rotate` 换发 Token，并立即使旧 Token 与该用户全部会话失效，历史保留；`revoke` 停止该用户所有登录；`issue` 仅在没有有效 Token 时发放。数据库只保存凭据摘要，无法找回旧明文。在容器中运行时，将命令前缀替换为 `docker compose exec braingym node dist/server/server/cli.js`。
 
 ## 验证
 
@@ -53,7 +61,9 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-浏览器测试使用独立的 `data/e2e-*.sqlite`，不会操作默认账户库；可通过 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` 指向已有 Chromium。测试覆盖游客不补传、前台中断、移动端输入、上传失败、响应丢失、身份失效及跨标签页账号切换。
+浏览器测试使用独立的 `data/e2e-*.sqlite`，不会操作默认账户库；可通过 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` 指向已有 Chromium。测试覆盖游客结果不补传、前台中断、移动端输入、上传失败、响应丢失、身份失效及跨标签页账号切换。
+
+设置 `$env:E2E_BASE_PATH='/braingym/'` 后再次执行 `npm run test:e2e`，验证同一构建在前缀路径下的运行；验证结束后用 `Remove-Item Env:E2E_BASE_PATH` 清除该测试配置。
 
 后台中断场景由原生 Chromium CDP 脚本验证，避免 Playwright 的强制前台设置掩盖真实 `visibilitychange`。Docker 持久化验收可在镜像构建后执行 `./scripts/verify-docker.ps1 -Image <image-name>`，脚本使用并清理专用测试容器和数据卷，不操作应用的数据卷。
 

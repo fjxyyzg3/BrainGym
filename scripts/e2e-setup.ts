@@ -1,11 +1,13 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
+import { normalizeBasePath } from "../src/shared/paths.js";
 
 export default async function setup() {
   const port = process.env.E2E_PORT ?? "3100",
     origin = `http://127.0.0.1:${port}`;
+  const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);
   if (process.env.E2E_REUSE_SERVER === "true") {
-    const res = await fetch(`${origin}/api/health`);
+    const res = await fetch(`${origin}${basePath}api/health`);
     if (!res.ok) throw new Error("External verification server is not ready");
     return;
   }
@@ -20,6 +22,8 @@ export default async function setup() {
       DATABASE_PATH: process.env.E2E_DATABASE_PATH,
       COOKIE_SECURE: "false",
       NODE_ENV: "test",
+      APP_BASE_PATH: basePath,
+      WHEELMAKER_APP_MANAGED: "0",
     },
   });
   let diagnostics = "";
@@ -45,7 +49,7 @@ export default async function setup() {
     if (child.exitCode !== null)
       throw new Error(`Verification server exited: ${diagnostics}`);
     try {
-      const response = await fetch(`${origin}/api/health`);
+      const response = await fetch(`${origin}${basePath}api/health`);
       if (response.ok) return stop;
     } catch {}
     await new Promise((done) => setTimeout(done, 100));

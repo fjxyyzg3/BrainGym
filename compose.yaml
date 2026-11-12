@@ -1,0 +1,15 @@
+services:
+  braingym:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    environment:
+      APP_ORIGIN: ${APP_ORIGIN:-http://127.0.0.1:3000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      DATABASE_PATH: /app/data/braingym.sqlite
+    volumes:
+      - braingym-data:/app/data
+
+volumes:
+  braingym-data:

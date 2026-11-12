@@ -1,0 +1,12 @@
+node_modules/
+.npm-cache/
+.docker-local/
+dist/
+data/
+test-results/
+playwright-report/
+.env
+.worktree/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

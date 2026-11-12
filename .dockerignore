@@ -1,0 +1,11 @@
+node_modules
+.npm-cache
+.git
+.env
+data
+dist
+test-results
+playwright-report
+docs
+tests
+.docker-local

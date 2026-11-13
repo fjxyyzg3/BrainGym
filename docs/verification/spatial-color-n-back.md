@@ -1,6 +1,6 @@
 # 位置＋颜色 N-back 验收记录
 
-日期：2026-11-13。范围：[已批准 spec](../scope/2026-11-13-spatial-color-n-back.md)。代码、双路径自动化验收及隔离候选演练通过，Git 收尾结果见下文。正式部署不在该 spec 授权范围内，未操作正式服务、Hub 配置或正式数据库，不将代码交付记为整体上线完成。
+日期：2026-11-13。范围：[已批准 spec](../scope/2026-11-13-spatial-color-n-back.md)及用户在代码阶段完成后的明确发布授权。代码、双路径自动化验收、隔离候选演练及正式发布验收均已完成；当前正式状态为 `published / verified`。正式配置未变，既有用户、Token、有效会话与训练历史保留。
 
 ## 本次验证
 
@@ -47,7 +47,7 @@
 
 **Verification**：检查 `git status --short`、`git diff --stat`、实际 diff 和新增文件；本地扫描未发现真实凭据或生产入口。`.gitignore` 与 `.dockerignore` 排除环境文件、依赖、SQLite、`.runtime`、构建和测试产物，未修改打包白名单或新增依赖。实际自动化结果见上表。
 
-**Residual Risk**：实际 Android/iOS/Safari、实体设备双触屏与锁屏未验；Chromium 触屏模拟及原生后台不替代这些证据。未执行真实公网 HTTPS/代理检查或正式 deploy，不能声称整体上线完成。浏览器仍负责出题和统计，服务端不证明真实游玩过程，沿用现有信任边界。
+**Residual Risk**：实际 Android/iOS/Safari、实体设备双触屏与锁屏未验；Chromium 触屏模拟及原生后台不替代这些证据。正式 HTTPS 与发布结果已在下文核验，当前入口未返回 HSTS 和 Permissions-Policy，作为 P2 加固项记录，未调整代理策略。浏览器仍负责出题和统计，服务端不证明真实游玩过程，沿用现有信任边界。
 
 ## 演练与 Git 状态
 
@@ -69,3 +69,27 @@
 | `1295cc6` | `docs: record successful spatial color n-back rehearsal` |
 
 来源：[实施计划](../plans/2026-11-13-spatial-color-n-back/plan-spatial-color-n-back.md)、[新增 Node 测试](../../tests/color-n-back.test.ts)、[双路浏览器测试](../../tests/e2e/color-n-back.spec.ts)、[PWA 浏览器测试](../../tests/e2e/pwa.spec.ts)、[原生后台脚本](../../scripts/check-native-visibility.mjs)。
+
+## 正式发布验收
+
+2026-11-13，用户明确要求继续使用已演练候选发布并验收。在稳定 `main`（发布前为 `60fa7b0`）重新执行 Git prepare，确认工作区干净且已同步远端；`assertPublishable` 证明现有候选的封存、文件摘要及源码 fingerprint 仍有效，复用先前 8 项演练检查，没有重新构建或更换候选。
+
+执行 `npm run release -- deploy --candidate .runtime/releases/candidates/8540adb3c10f-7db199fe-6931-402c-ae5c-51567b6ad338`，目标为既有正式程序目录。预检确认实例健康、无待重启状态，现役定义与目标定义一致。工具只按 appId Stop/Start BrainGym，停服后以独占文件方式备份完整数据库目录与原程序，再替换已演练程序；没有写入 Hub 定义或请求全局 Reload，也没有回滚数据库。
+
+| 发布检查                    | 实际结果                                                                                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 受控发布与状态              | deploy 返回 `passed: true`、`state: published`；`npm run release -- status` 返回 `published / verified`                                                       |
+| 停服备份与原数据            | 只读指纹确认备份及现役库都保留原用户、Token 摘要、有效会话与训练历史；真实浏览器验收后再次确认保留                                                            |
+| 程序、Monitor 与 Forwarding | 正式程序摘要与候选一致，新实例 healthy，Forwarding ready，3001 只监听 `127.0.0.1`                                                                             |
+| 配置与非目标应用            | 发布前后配置文件摘要一致；非目标应用的 ID、阶段、PID、instanceId 及待重启状态摘要一致；发布上下文的 definitionWritten、loadRequested 均为 false               |
+| 真实 HTTPS 与资源           | 实际入口、`/braingym/` 基础路径、发行标记、静态资源及浏览器加载通过，没有跳过证书校验                                                                         |
+| 安全响应                    | CSP、防嵌入、nosniff、Referrer-Policy 验证通过；新模式 history/bests 匿名访问均为 401 且 no-store；HSTS、Permissions-Policy 未出现                            |
+| 新模式在线游客              | 正式大厅包含两种模式，新模式固定六色及 1～5 N 选项；warmup 禁止输入，留空可用 F/J 独立标记，下一轮状态独立重置；每路统计合计 30，综合显示与未舍入分项均值一致 |
+| 实际 PWA 离线               | 正式入口完成真实 worker 缓存后离线冷开双路模式，显式游客完成得两路及综合 50.0；恢复联网仍为游客，无成绩 POST                                                  |
+| 页面与写入边界              | 桌面和 390px 视口结果截图已查看，无溢出、无浏览器运行错误；仅使用游客，没有在正式库创建测试身份、登录真实账号或提交测试成绩                                   |
+
+**Findings**：未发现本次发布的 P0/P1 阻塞问题。P2：实际 HTTPS 响应缺少 HSTS、Permissions-Policy；证据为私有脱敏发布检查 `post-deploy.json` 中对应布尔值为 false。该项不以放宽 CSP、Cookie 或来源校验处理，也不擅自更改代理配置。
+
+**Verification**：复用已封存候选及代码阶段验证，另执行正式 deploy、status、真实 HTTPS 浏览器游客/离线验收，以及发布前后数据库、配置和非目标实例的只读校验。私有摘要、运行结果及截图位于忽略的 `.runtime/verification/spatial-color-n-back-production/`，真实入口、控制认证和原始部署现场仍只在私有配置与 `.runtime/releases/state/` 中，不写入跟踪文件。
+
+**Residual Risk**：实体手机、Safari 与实际锁屏仍未验证；HSTS/Permissions-Policy 为后续代理加固项。既有已安装 PWA 按原更新策略等待所有 BrainGym 标签页/独立窗口关闭后切换，不强制接管进行中对局。

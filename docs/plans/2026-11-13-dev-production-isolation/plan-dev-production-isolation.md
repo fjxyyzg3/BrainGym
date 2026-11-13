@@ -31,7 +31,7 @@
 - [x] 实现 `BRAINGYM_ENV` 环境选择及路径校验；开发入口加载未跟踪 `.env.development.local`，正式配置不进入开发进程；CLI 的环境诊断写 stderr，stdout 保持 JSON。
 - [x] 让 Vite serve 与 API 使用同一开发设置，构建仍输出当前工作区 dist，不访问正式目录。
 - [x] 更新 CLI/进程/e2e fixture 显式选择 test；环境与 CLI 针对性验证 6 项 GREEN，typecheck 通过；托管及浏览器回归纳入最终串行验证。
-- [ ] 按最终改动面完成必需验证后 checkpoint。
+- [x] 按最终改动面完成必需验证后 checkpoint：`7116236`；构建环境修正为 `70ed2b5`。
 
 ## Task 2：候选、来源与有效验收证据
 
@@ -42,8 +42,8 @@
 - [x] 使用临时 Git 仓库与真实目录建立来源、打包白名单和摘要篡改断言；通过现有 npm 入口证明发布命令尚不可用的 RED。
 - [x] 实现候选快照、锁文件安装、构建与检查执行、内容/运行环境摘要及证据；有效证据复用，过期则重新验证。
 - [x] 实现规范路径、不跟随链接、目标所有权、生产目录与数据目录分离检查，以及稳定私有发布工作目录。
-- [ ] 用同一候选执行根路径和前缀浏览器测试；验证生产依赖包及已有 Token/会话在隔离库中的兼容。
-- [ ] 运行针对性验证并记录 GREEN；按最终改动面完成必需验证后 checkpoint。
+- [x] 用同一候选执行根路径和前缀浏览器测试；验证生产依赖包及已有 Token/会话在隔离库中的兼容。
+- [x] 运行针对性验证并记录 GREEN；checkpoint `7116236` / `70ed2b5`。Git 快照候选完整 `npm run rehearse` 退出码 0。
 
 ## Task 3：发布状态机、Hub 控制与保护
 
@@ -74,7 +74,7 @@
 **Files:** 修改 `README.md`、`.env.example`、`AGENTS.md`、`docs/wiki/operations.md`、`docs/wiki/architecture.md`；创建 `docs/verification/dev-production-isolation.md`。
 
 - [x] 记录开发、演练、发布、正式 CLI、两阶段 Git、Reload 基线、失败恢复、数据库备份及本机私有证据位置；wiki 按实际代码同步。
-- [ ] 依次通过 `npm run typecheck`、`npm run build`、`npm test`、`npm run test:e2e`；设置 `E2E_BASE_PATH=/braingym/` 对同一构建再跑 e2e 并清除配置。
+- [x] 依次通过 `npm run typecheck`、`npm run build`、`npm test`、`npm run test:e2e`；设置 `E2E_BASE_PATH=/braingym/` 对同一构建再跑 e2e 并清除配置。
 - [x] 执行依赖审计及认证/数据/浏览器/网络/凭据/打包输入审查，记录实际结果，确认 tracked diff 不含私有值与运行数据。
 - [ ] checkpoint 当前已验证代码与证据，刷新远端、同步、推送功能分支、合入并推送 main，核对实际远端 SHA；不把此阶段称为整体完成。
 

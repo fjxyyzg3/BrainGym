@@ -26,7 +26,7 @@
 
 **Acceptance:** 新模式可合法保存、服务端复算，原合同/幂等保留；两维独立作答、每路合计 30，模式隔离且非法查询拒绝。
 
-- [ ] RED：先用真实 Store/buildApp 与临时数据库验证新模式 POST 应为 200、双路分数复算为 75，未知和重复 game 查询应为 400；运行 `node --import tsx --test tests/color-n-back.test.ts`，记录缺失新模式导致的断言失败。
+- [x] RED：先用真实 Store/buildApp 与临时数据库验证新模式 POST 应为 200、双路分数复算为 75，未知和重复 game 查询应为 400；运行 `node --import tsx --test tests/color-n-back.test.ts`，记录缺失新模式导致的断言失败。
 
 ```ts
 assert.equal(saved.statusCode, 200);
@@ -38,9 +38,9 @@ assert.equal(
 );
 ```
 
-- [ ] GREEN：新增 COLOR_GAME/GameId/SpatialResultInput/ColorResultInput 和结果联合；generateColorSequence 独立调用九候选/六候选生成器，scoreResult 分派计分。扩展现引擎参数、快照与维度输入；服务端规范化 position/color，保持旧字段顺序和原 JSON 幂等语义；history/bests 增加缺省为空间模式的 game 参数。
-- [ ] 规则/引擎覆盖：所有 N 的范围与退化重抽；已知四种匹配组合序列、warmup/留空/重复/同轮双输入；双路统计及复制隔离；完成/中断。服务端覆盖任一路坏统计、缺路、未知版本、假分数、跨模式同 ID、模式/N 最佳、分页/旧接口、撤销和跨用户授权。
-- [ ] 回归：`node --import tsx --test tests/rules.test.ts tests/game.test.ts tests/color-n-back.test.ts tests/server.test.ts` 通过；阶段 checkpoint 等待 Task 3 完整门槛。
+- [x] GREEN：新增 COLOR_GAME/GameId/SpatialResultInput/ColorResultInput 和结果联合；generateColorSequence 独立调用九候选/六候选生成器，scoreResult 分派计分。扩展现引擎参数、快照与维度输入；服务端规范化 position/color，保持旧字段顺序和原 JSON 幂等语义；history/bests 增加缺省为空间模式的 game 参数。
+- [x] 规则/引擎覆盖：所有 N 的范围与退化重抽；已知四种匹配组合序列、warmup/留空/重复/同轮双输入；双路统计及复制隔离；完成/中断。服务端覆盖任一路坏统计、缺路、未知版本、假分数、跨模式同 ID、模式/N 最佳、分页/旧接口、撤销和跨用户授权。
+- [x] 回归：`node --import tsx --test tests/rules.test.ts tests/game.test.ts tests/color-n-back.test.ts tests/server.test.ts` 通过；阶段 checkpoint 等待 Task 3 完整门槛。
 
 ### Task 2: 大厅、双路交互、结果与记录导航
 
@@ -48,11 +48,11 @@ assert.equal(
 
 **Acceptance:** 新模式独立入口，六色刺激、F/J/触屏独立标记，结果显示双路统计与综合分，记录切换及三条导航规则正确。
 
-- [ ] RED：先新增浏览器用例，从大厅查找“位置＋颜色 N-back”，要求两个匹配按钮和结果后的对应模式记录；原构建上运行 `npm run test:e2e -- --grep 'dual mode'`，确认因新入口缺失而断言失败。
-- [ ] GREEN：在现有 hash 路由增加 color-n-back；Training 按游戏 key 挂载，确保模式切换也中断旧局。原模式保留空格，新模式 F/J，忽略 repeat、组合键与输入控件；每维按钮使用原生 button、独立 aria-pressed 和可见文字反馈。六色用固定本地色板，留空不泄露刺激。
-- [ ] 结果/记录：Outcome 保存固定 game 与结果联合；两路统计分别展示并使用共享 scoreResult。App 显式传递结果模式到 Records，普通记录入口初始化 GAME；Records 当前模式同时驱动查询、分页和所有训练入口，模式与账户变化清理过期请求。双路历史使用有维度标签的统计，不合并为 60 次。
-- [ ] 浏览器验收：用真实时钟控制完成游客与登录局、F/J 同轮去重与长按、移动触屏、已知刺激对比、手动保存重试、跨标签页身份变化、模式记录/N 最佳、跨页三条规则和直接模式路由切换作废；PWA 真 worker 离线新模式游客不补传。
-- [ ] 视觉：桌面/390px 截图检查九宫格、六色色板、双按钮、双路结果、模式记录无溢出；保留键盘焦点与缩放，实际手机/锁屏未取得的证据单列。
+- [x] RED：先新增浏览器用例，从大厅查找“位置＋颜色 N-back”，要求两个匹配按钮和结果后的对应模式记录；原构建上运行 `npm run test:e2e -- --grep 'dual mode'`，确认因新入口缺失而断言失败。
+- [x] GREEN：在现有 hash 路由增加 color-n-back；Training 按游戏 key 挂载，确保模式切换也中断旧局。原模式保留空格，新模式 F/J，忽略 repeat、组合键与输入控件；每维按钮使用原生 button、独立 aria-pressed 和可见文字反馈。六色用固定本地色板，留空不泄露刺激。
+- [x] 结果/记录：Outcome 保存固定 game 与结果联合；两路统计分别展示并使用共享 scoreResult。App 显式传递结果模式到 Records，普通记录入口初始化 GAME；Records 当前模式同时驱动查询、分页和所有训练入口，模式与账户变化清理过期请求。双路历史使用有维度标签的统计，不合并为 60 次。
+- [x] 浏览器验收：用真实时钟控制完成游客与登录局、F/J 同轮去重与长按、移动触屏、已知刺激对比、手动保存重试、跨标签页身份变化、模式记录/N 最佳、跨页三条规则和直接模式路由切换作废；PWA 真 worker 离线新模式游客不补传。
+- [x] 视觉：桌面/390px 截图检查九宫格、六色色板、双按钮、双路结果、模式记录无溢出；保留键盘焦点与缩放，实际手机/锁屏未取得的证据单列。
 
 ### Task 3: 完整验证、文档、演练与 Git 收尾
 
@@ -60,9 +60,18 @@ assert.equal(
 
 **Acceptance:** spec 每条验收都有本次证据或明确限制；旧空间玩法、身份隔离、PWA 与双路径无回归；完成已授权代码阶段 Git 工作流。
 
-- [ ] 依次运行 `npm run typecheck` → `npm run build` → `npm test` → `npm run test:e2e`；失败先修复根因，再重跑受影响门槛，不并行构建与运行时测试。
-- [ ] 同一构建设置 `$env:E2E_BASE_PATH='/braingym/'` 再运行 `npm run test:e2e`，finally 删除该变量；两种模式均走原生 Chromium CDP 后台验证。所有脚本显式使用临时/独立 SQLite。
-- [ ] 使用 wiki 技能同步已实现规则、合同、导航及身份边界；README 增加新模式说明。验收记录包含 RED/GREEN、最终命令、截图结论、未做真机项及 Findings/Verification/Residual Risk。
+- [x] 依次运行 `npm run typecheck` → `npm run build` → `npm test` → `npm run test:e2e`；失败先修复根因，再重跑受影响门槛，不并行构建与运行时测试。
+- [x] 同一构建设置 `$env:E2E_BASE_PATH='/braingym/'` 再运行 `npm run test:e2e`，finally 删除该变量；两种模式均走原生 Chromium CDP 后台验证。所有脚本显式使用临时/独立 SQLite。
+- [x] 使用 wiki 技能同步已实现规则、合同、导航及身份边界；README 增加新模式说明。验收记录包含 RED/GREEN、最终命令、截图结论、未做真机项及 Findings/Verification/Residual Risk。
 - [ ] 运行 `npm run rehearse` 生成独立候选，按现有隔离演练入口验证候选；不执行正式 deploy 或 Hub 控制，不读取/输出正式凭据。
-- [ ] 检查 status/stat/实际 diff、.gitignore/.dockerignore 与本任务敏感信息扫描，核实不引入依赖或数据库迁移；格式检查只覆盖本次文件。
+- [x] 检查 status/stat/实际 diff、.gitignore/.dockerignore 与本任务敏感信息扫描，核实不引入依赖或数据库迁移；格式检查只覆盖本次文件。
 - [ ] git-workflow checkpoint 提交通过完整门槛的实现；finalize 刷新并同步远端、push 和核验 SHA，按偏好合入 main 并清理已合并且干净的任务分支/worktree，不包含任务外改动。阶段完成后从稳定 main 记录交付状态，正式发布仍按 spec 授权范围单列。
+
+## 执行证据
+
+- 2026-11-13：服务端 RED 为新模式保存 400≠200、未知 game 查询 200≠400；浏览器 RED 为新模式大厅卡片不存在。
+- Task 1 GREEN：27 个聚焦 Node 测试通过（含新增 10 个双路测试），原空间合同与输入测试保持通过。
+- Task 2 GREEN：9 个新模式浏览器用例通过；原生 CDP 分别验证两种模式的后台作废。桌面结果、记录与 390px 双按钮截图已检查，无溢出；实际手机与锁屏未验证。
+- 完整门槛进度：typecheck、build、npm test 已通过，Node 全套 86/86；最终同构建根路径和前缀各 26/26 通过。阶段代码 checkpoint 依既定策略等待完整门槛。
+
+- 文档已完成专用代理优化与独立只读复核；最后一次完整门槛包括六色色板命名分组语义，全部通过。

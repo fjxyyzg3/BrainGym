@@ -8,6 +8,30 @@ import { normalizeBasePath } from "../../src/shared/paths.js";
 import { releaseServer } from "./pwa-server";
 
 const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);
+test("PWA dual mode offline guest uses cached shell and never uploads after reconnect", async ({
+  page,
+  context,
+}) => {
+  await prime(page);
+  await page.close();
+  await context.setOffline(true);
+  const offline = await context.newPage();
+  let uploads = 0;
+  offline.on("request", (request) => {
+    if (request.url().endsWith("/api/results")) uploads++;
+  });
+  await offline.goto(`${basePath}#color-n-back`);
+  await expect(
+    offline.getByRole("heading", { name: "位置＋颜色 N-back", exact: true }),
+  ).toBeVisible();
+  await playOffline(offline);
+  await expect(offline.getByTestId("position-score")).toHaveText("50.0 分");
+  await expect(offline.getByTestId("color-score")).toHaveText("50.0 分");
+  await context.setOffline(false);
+  await offline.bringToFront();
+  expect(uploads).toBe(0);
+  expect(await offline.evaluate(() => localStorage.length)).toBe(0);
+});
 async function prime(page: Page, url = basePath) {
   await page.goto(url);
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
@@ -104,7 +128,10 @@ test("PWA cold start offline requires explicit guest choice and never uploads", 
   await expect(
     offline.getByRole("heading", { name: "训练大厅", exact: true }),
   ).toBeVisible();
-  await offline.getByRole("button", { name: "开始训练", exact: true }).click();
+  await offline
+    .getByRole("article", { name: "空间 N-back", exact: true })
+    .getByRole("button", { name: "开始训练", exact: true })
+    .click();
   await expect(
     offline.getByRole("button", { name: "以游客身份练习", exact: true }),
   ).toBeVisible();
@@ -145,7 +172,10 @@ test("authenticated offline guest preserves session and stays guest after reconn
   await page.getByRole("button", { name: "登录", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const cookies = await context.cookies();
-  await page.getByRole("button", { name: "开始训练", exact: true }).click();
+  await page
+    .getByRole("article", { name: "空间 N-back", exact: true })
+    .getByRole("button", { name: "开始训练", exact: true })
+    .click();
   await context.setOffline(true);
   await page.getByRole("button", { name: "开始本局", exact: true }).click();
   await expect(
@@ -204,7 +234,10 @@ test("PWA registration failure leaves online training usable", async ({
     await expect(
       page.getByRole("heading", { name: "训练大厅", exact: true }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "开始训练", exact: true }).click();
+    await page
+      .getByRole("article", { name: "空间 N-back", exact: true })
+      .getByRole("button", { name: "开始训练", exact: true })
+      .click();
     await page.getByRole("button", { name: "开始本局", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "记忆准备 1 / 2" }),
@@ -242,7 +275,10 @@ test("PWA storage quota failure leaves online app usable and retries on reload",
     ).toBeVisible();
     await expect.poll(() => statuses.includes("redundant")).toBe(true);
     expect(await page.evaluate(() => caches.keys())).toEqual([]);
-    await page.getByRole("button", { name: "开始训练", exact: true }).click();
+    await page
+      .getByRole("article", { name: "空间 N-back", exact: true })
+      .getByRole("button", { name: "开始训练", exact: true })
+      .click();
     await page.getByRole("button", { name: "开始本局", exact: true }).click();
     await expect(
       page.getByRole("heading", { name: "记忆准备 1 / 2" }),
@@ -281,7 +317,10 @@ test("PWA update waits for all windows and preserves a pending result", async ({
       const cache = await caches.open(name);
       await cache.put("sentinel", new Response("untouched"));
     }, sentinel);
-    await page.getByRole("button", { name: "开始训练", exact: true }).click();
+    await page
+      .getByRole("article", { name: "空间 N-back", exact: true })
+      .getByRole("button", { name: "开始训练", exact: true })
+      .click();
     await page.clock.install();
     await page.clock.pauseAt(new Date(Date.now() + 1000));
     await page.getByRole("button", { name: "开始本局", exact: true }).click();

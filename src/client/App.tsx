@@ -7,28 +7,53 @@ import {
   type FormEvent,
 } from "react";
 import { api, ApiError } from "./api";
-import { NBackGame, type GameSnapshot } from "./game";
-import { generateSequence, score, STEP_MS, TRIALS } from "../shared/rules";
+import { NBackGame, type GameSnapshot, type Dimension } from "./game";
+import {
+  generateSequence,
+  generateColorSequence,
+  score,
+  scoreResult,
+  STEP_MS,
+  TRIALS,
+} from "../shared/rules";
 import {
   GAME,
+  COLOR_GAME,
+  GAME_NAMES,
   VERSION,
   type Counts,
   type User,
   type SavedResult,
   type ResultInput,
   type History,
+  type GameId,
+  type GameCounts,
+  type DualCounts,
 } from "../shared/contracts";
 
-type Page = "home" | "n-back" | "records";
+type Page = "home" | "n-back" | "color-n-back" | "records";
+const applicationTitle = document.title;
 const currentPage = (): Page =>
   location.hash === "#n-back"
     ? "n-back"
-    : location.hash === "#records"
-      ? "records"
-      : "home";
+    : location.hash === "#color-n-back"
+      ? "color-n-back"
+      : location.hash === "#records"
+        ? "records"
+        : "home";
 const go = (page: Page) => {
   location.hash = page;
 };
+const trainingPage = (game: GameId): Page =>
+  game === GAME ? "n-back" : "color-n-back";
+const COLORS = [
+  { name: "蓝", value: "#0057d9" },
+  { name: "橙", value: "#d44d26" },
+  { name: "紫", value: "#7b42b6" },
+  { name: "绿", value: "#00806a" },
+  { name: "玫红", value: "#aa2855" },
+  { name: "金", value: "#9c7000" },
+];
 const formatScore = (x: number) => x.toFixed(1);
 const formatTime = (x: string) =>
   new Date(x).toLocaleString("zh-CN", {
@@ -204,6 +229,7 @@ function Login({
 
 export function App() {
   const [page, setPage] = useState<Page>(currentPage),
+    [recordsGame, setRecordsGame] = useState<GameId>(GAME),
     [user, setUser] = useState<User | null>(null),
     [offline, setOffline] = useState(!navigator.onLine),
     [loading, setLoading] = useState(true),
@@ -223,8 +249,18 @@ export function App() {
     }
   }, []);
   useEffect(() => {
+    document.title =
+      page === "home"
+        ? applicationTitle
+        : `${page === "records" ? "个人记录" : GAME_NAMES[page === "color-n-back" ? COLOR_GAME : GAME]} | ${applicationTitle}`;
+  }, [page]);
+  useEffect(() => {
     void refresh();
-    const change = () => setPage(currentPage());
+    const change = () => {
+      const next = currentPage();
+      if (next !== "records") setRecordsGame(GAME);
+      setPage(next);
+    };
     const focus = () => {
       void refresh();
     };
@@ -254,6 +290,10 @@ export function App() {
   const openLogin = useCallback(() => setLogin(true), []),
     closeLogin = useCallback(() => setLogin(false), []);
   const savedCallback = useCallback(() => setRevision((x) => x + 1), []);
+  const openRecords = useCallback((game: GameId) => {
+    setRecordsGame(game);
+    go("records");
+  }, []);
   const abortNotice = useCallback(
     () => setNotice("本局已结束，未计入历史和最佳成绩。"),
     [],
@@ -303,13 +343,14 @@ export function App() {
           <nav className="main-nav" aria-label="主导航">
             <a
               href="#home"
-              className={page === "home" || page === "n-back" ? "active" : ""}
+              className={page !== "records" ? "active" : ""}
               aria-current={page === "home" ? "page" : undefined}
             >
               训练大厅
             </a>
             <a
               href="#records"
+              onClick={() => setRecordsGame(GAME)}
               className={page === "records" ? "active" : ""}
               aria-current={page === "records" ? "page" : undefined}
             >
@@ -363,6 +404,8 @@ export function App() {
           <Home />
         ) : page === "records" ? (
           <Records
+            gameId={recordsGame}
+            onGame={setRecordsGame}
             user={user}
             revision={revision}
             onLogin={openLogin}
@@ -371,6 +414,9 @@ export function App() {
           />
         ) : (
           <Training
+            key={page}
+            gameId={page === "color-n-back" ? COLOR_GAME : GAME}
+            onRecords={openRecords}
             user={user}
             offline={offline}
             onLogin={openLogin}
@@ -394,36 +440,78 @@ function Home() {
         <p>选一个游戏，开始练习。</p>
       </div>
       <section className="games-grid" aria-label="游戏列表">
-        <article className="game-card" aria-labelledby="n-back-title">
-          <div className="game-card-icon">
-            <MiniGrid />
-          </div>
-          <h2 id="n-back-title">空间 N-back</h2>
-          <p className="game-description">记住位置，判断是否与 N 步前相同。</p>
-          <div className="game-meta">
-            <span>
-              <Icon name="clock" size={16} />约 80 秒
-            </span>
-            <span>1～5 级难度</span>
-          </div>
-          <button className="primary card-start" onClick={() => go("n-back")}>
-            开始训练
-            <Icon name="arrow" size={18} />
-          </button>
-        </article>
+        {([GAME, COLOR_GAME] as const).map((gameId) => (
+          <article
+            key={gameId}
+            className="game-card"
+            aria-labelledby={`${gameId}-title`}
+          >
+            <div className="game-card-icon">
+              <MiniGrid />
+            </div>
+            <h2 id={`${gameId}-title`}>{GAME_NAMES[gameId]}</h2>
+            <p className="game-description">
+              {gameId === GAME
+                ? "记住位置，判断是否与 N 步前相同。"
+                : "同时记住位置和颜色，分别判断是否与 N 步前相同。"}
+            </p>
+            <div className="game-meta">
+              <span>
+                <Icon name="clock" size={16} />约 80 秒
+              </span>
+              <span>1～5 级难度</span>
+            </div>
+            <button
+              className="primary card-start"
+              onClick={() => go(trainingPage(gameId))}
+            >
+              开始训练
+              <Icon name="arrow" size={18} />
+            </button>
+          </article>
+        ))}
       </section>
     </>
   );
 }
 
 interface Outcome {
-  counts: Counts;
+  summary: GameCounts;
   n: number;
   owner: User | null;
   payload: ResultInput | null;
   localScore: number;
 }
+function CountSummary({
+  counts,
+  dimension,
+}: {
+  counts: Counts;
+  dimension?: Dimension;
+}) {
+  return (
+    <div className="counts-grid">
+      {(
+        [
+          ["tp", "命中"],
+          ["fn", "漏报"],
+          ["fp", "误报"],
+          ["tn", "正确拒绝"],
+        ] as const
+      ).map(([key, label]) => (
+        <div key={key}>
+          <strong data-testid={dimension ? `${dimension}-${key}` : key}>
+            {counts[key]}
+          </strong>
+          <span>{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 function Training({
+  gameId,
+  onRecords,
   user,
   offline,
   onLogin,
@@ -432,6 +520,8 @@ function Training({
   onSaved,
   onAbortNotice,
 }: {
+  gameId: GameId;
+  onRecords: (game: GameId) => void;
   user: User | null;
   offline: boolean;
   onLogin: () => void;
@@ -440,6 +530,7 @@ function Training({
   onSaved: () => void;
   onAbortNotice: () => void;
 }) {
+  const dual = gameId === COLOR_GAME;
   const [n, setN] = useState(2),
     [mode, setMode] = useState<"idle" | "running" | "result" | "aborted">(
       "idle",
@@ -451,7 +542,7 @@ function Training({
     [saveStatus, setSaveStatus] = useState<
       "saving" | "saved" | "failed" | "guest"
     >("guest");
-  const game = useRef<NBackGame | null>(null),
+  const game = useRef<NBackGame<GameId> | null>(null),
     owner = useRef<User | null>(null),
     alive = useRef(true),
     saving = useRef(false),
@@ -514,21 +605,39 @@ function Training({
       }
     };
   }, [abort, onAbortNotice]);
-  const respond = useCallback(() => {
-    if (game.current?.answer(performance.now()))
+  const respond = useCallback((dimension: Dimension = "position") => {
+    if (game.current?.answer(performance.now(), dimension))
       setSnapshot(game.current.tick(performance.now()));
   }, []);
   useEffect(() => {
     if (mode !== "running") return;
     const key = (e: KeyboardEvent) => {
-      if (e.code === "Space") {
+      if (
+        e.ctrlKey ||
+        e.altKey ||
+        e.metaKey ||
+        e.isComposing ||
+        (e.target instanceof HTMLElement &&
+          e.target.closest("input, textarea, select, [contenteditable=true]"))
+      )
+        return;
+      const dimension = dual
+        ? e.code === "KeyF"
+          ? "position"
+          : e.code === "KeyJ"
+            ? "color"
+            : null
+        : e.code === "Space"
+          ? "position"
+          : null;
+      if (dimension) {
         e.preventDefault();
-        if (!e.repeat) respond();
+        if (!e.repeat) respond(dimension);
       }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [mode, respond]);
+  }, [mode, respond, dual]);
   const start = async (asGuest = false) => {
     setStarting(true);
     setError("");
@@ -549,7 +658,12 @@ function Training({
       if (!alive.current) return;
       owner.current = current;
       resultId.current = crypto.randomUUID();
-      game.current = new NBackGame(n, generateSequence(n), performance.now());
+      game.current = new NBackGame<GameId>(
+        n,
+        dual ? generateColorSequence(n) : generateSequence(n),
+        performance.now(),
+        gameId,
+      );
       running.current = true;
       lastSnapshot.current = "";
       setOutcome(null);
@@ -565,23 +679,26 @@ function Training({
         if (state.phase === "finished") {
           running.current = false;
           const counts = game.current.result!;
+          const summary: GameCounts =
+            gameId === GAME
+              ? { game: GAME, ...(counts as Counts) }
+              : { game: COLOR_GAME, ...(counts as DualCounts) };
           const completedAt = new Date().toISOString();
           const result: Outcome = {
-            counts,
+            summary,
             n,
             owner: owner.current,
             payload: owner.current
               ? {
-                  ...counts,
+                  ...summary,
                   resultId: resultId.current,
                   startedByUserId: owner.current.id,
-                  game: GAME,
                   version: VERSION,
                   n,
                   completedAt,
                 }
               : null,
-            localScore: score(counts),
+            localScore: scoreResult(summary),
           };
           setOutcome(result);
           setMode("result");
@@ -610,30 +727,51 @@ function Training({
           </span>
           <div className="eyebrow">SESSION COMPLETE</div>
           <h1>练习完成，做得不错。</h1>
-          <p>{outcome.n}-back · 30 次有效判断</p>
+          <p>
+            {GAME_NAMES[outcome.summary.game]} · {outcome.n}-back · 30{" "}
+            {dual ? "轮双路" : "次有效"}判断
+          </p>
         </div>
         <div className="result-card">
-          <div className="score-caption">平衡准确率</div>
+          <div className="score-caption">{dual ? "综合分" : "平衡准确率"}</div>
           <div className="big-score" data-testid="score">
             {formatScore(outcome.localScore)}
             <small>/ 100</small>
           </div>
-          <p className="muted">匹配命中率与不匹配正确拒绝率各占一半</p>
-          <div className="counts-grid">
-            {(
-              [
-                ["tp", "命中"],
-                ["fn", "漏报"],
-                ["fp", "误报"],
-                ["tn", "正确拒绝"],
-              ] as const
-            ).map(([key, label]) => (
-              <div key={key}>
-                <strong data-testid={key}>{outcome.counts[key]}</strong>
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
+          <p className="muted">
+            {dual
+              ? "位置与颜色的平衡准确率各占一半"
+              : "匹配命中率与不匹配正确拒绝率各占一半"}
+          </p>
+          {outcome.summary.game === GAME ? (
+            <CountSummary counts={outcome.summary} />
+          ) : (
+            (["position", "color"] as const).map((dimension) => (
+              <section className="channel-result" key={dimension}>
+                <h2>
+                  {dimension === "position" ? "位置" : "颜色"}判断{" "}
+                  <strong data-testid={`${dimension}-score`}>
+                    {formatScore(
+                      score(
+                        outcome.summary.game === COLOR_GAME
+                          ? outcome.summary[dimension]
+                          : outcome.summary,
+                      ),
+                    )}
+                    <small> 分</small>
+                  </strong>
+                </h2>
+                <CountSummary
+                  counts={
+                    outcome.summary.game === COLOR_GAME
+                      ? outcome.summary[dimension]
+                      : outcome.summary
+                  }
+                  dimension={dimension}
+                />
+              </section>
+            ))
+          )}
           <div
             className={`save-message ${saveStatus === "failed" ? "save-error" : ""}`}
             role="status"
@@ -683,7 +821,9 @@ function Training({
             </button>
             <button
               className="secondary"
-              onClick={() => go(outcome.owner ? "records" : "home")}
+              onClick={() =>
+                outcome.owner ? onRecords(outcome.summary.game) : go("home")
+              }
             >
               {outcome.owner ? "查看个人记录" : "返回训练大厅"}
             </button>
@@ -695,7 +835,9 @@ function Training({
     return (
       <section className="play-page">
         <div className="play-top">
-          <span className="tag">空间 {n}-back</span>
+          <span className="tag">
+            {dual ? "位置＋颜色" : "空间"} {n}-back
+          </span>
           <button className="text-button" onClick={abort}>
             结束本局
             <Icon name="close" size={15} />
@@ -704,7 +846,9 @@ function Training({
         <div className="play-title">
           <span className="eyebrow">
             {snapshot.phase === "warmup"
-              ? "先记住起始位置"
+              ? dual
+                ? "先记住起始位置和颜色"
+                : "先记住起始位置"
               : "保持专注，跟随节奏"}
           </span>
           <h1>
@@ -712,38 +856,85 @@ function Training({
               ? `记忆准备 ${snapshot.trial} / ${n}`
               : `判断 ${snapshot.trial} / 30`}
           </h1>
-          <p>当前位置与 {n} 步前相同，就按下匹配</p>
+          <p>
+            {dual
+              ? `分别比较 ${n} 步前的位置和颜色`
+              : `当前位置与 ${n} 步前相同，就按下匹配`}
+          </p>
         </div>
-        <div className="board" role="img" aria-label="九宫格位置展示">
+        <div
+          className="board"
+          role="img"
+          aria-label={
+            dual
+              ? snapshot.lit && snapshot.color !== null
+                ? `九宫格第 ${snapshot.cell! + 1} 格，${COLORS[snapshot.color].name}色`
+                : "九宫格留空"
+              : "九宫格位置展示"
+          }
+        >
           {Array.from({ length: 9 }, (_, i) => (
             <div
               key={i}
               data-testid={`cell-${i}`}
               className={`cell ${snapshot.lit && snapshot.cell === i ? "lit" : ""}`}
+              style={
+                dual &&
+                snapshot.lit &&
+                snapshot.cell === i &&
+                snapshot.color !== null
+                  ? { backgroundColor: COLORS[snapshot.color].value }
+                  : undefined
+              }
             />
           ))}
         </div>
-        <button
-          className={`primary match-button ${snapshot.answered ? "marked" : ""}`}
-          disabled={snapshot.phase !== "playing" || snapshot.answered}
-          onPointerDown={(e) => {
-            e.preventDefault();
-            respond();
-          }}
-          onClick={(e) => {
-            if (e.detail === 0) respond();
-          }}
-        >
-          {snapshot.answered ? (
-            <>
-              <Icon name="check" />
-              已标记匹配
-            </>
-          ) : (
-            "匹配"
-          )}
-          <kbd aria-hidden="true">空格</kbd>
-        </button>
+        <div className={dual ? "match-actions" : undefined}>
+          {(dual
+            ? (["position", "color"] as const)
+            : (["position"] as const)
+          ).map((dimension) => {
+            const answered =
+              dimension === "position"
+                ? snapshot.answered
+                : snapshot.colorAnswered;
+            const label = dual
+              ? dimension === "position"
+                ? "位置匹配"
+                : "颜色匹配"
+              : "匹配";
+            return (
+              <button
+                key={dimension}
+                aria-label={dual ? label : answered ? "已标记匹配" : label}
+                aria-pressed={answered}
+                className={`primary match-button ${answered ? "marked" : ""}`}
+                disabled={snapshot.phase !== "playing" || answered}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  respond(dimension);
+                }}
+                onClick={(e) => {
+                  if (e.detail === 0) respond(dimension);
+                }}
+              >
+                {answered ? (
+                  <>
+                    <Icon name="check" />
+                    {dual
+                      ? `${dimension === "position" ? "位置" : "颜色"}已标记`
+                      : "已标记匹配"}
+                  </>
+                ) : (
+                  label
+                )}
+                <kbd aria-hidden="true">
+                  {dual ? (dimension === "position" ? "F" : "J") : "空格"}
+                </kbd>
+              </button>
+            );
+          })}
+        </div>
         <p className="play-hint">不相同，无需操作 · 留空期间也可以作答</p>
         <div className="progress-track">
           <div
@@ -762,8 +953,12 @@ function Training({
       </a>
       <div className="training-title">
         <span className="eyebrow">WORKING MEMORY</span>
-        <h1>空间 N-back</h1>
-        <p>观察当下的位置，回想 N 步之前。</p>
+        <h1>{GAME_NAMES[gameId]}</h1>
+        <p>
+          {dual
+            ? "同时记住位置和颜色，分别判断。"
+            : "观察当下的位置，回想 N 步之前。"}
+        </p>
       </div>
       {mode === "aborted" && (
         <div className="warning" role="status">
@@ -774,15 +969,35 @@ function Training({
         <section className="instructions card">
           <div className="instruction-visual">
             <MiniGrid />
-            <span>现在的位置 = N 步前的位置？</span>
+            <span>
+              {dual
+                ? "位置和颜色，分别与 N 步前比较"
+                : "现在的位置 = N 步前的位置？"}
+            </span>
           </div>
           <h2>如何练习</h2>
           <ol>
-            <li>九宫格中的一个位置会短暂亮起，记住它。</li>
             <li>
-              与 <strong>N 步之前</strong>的位置相同，就点击“匹配”或按空格。
+              九宫格中的一个位置会短暂亮起，
+              {dual ? "同时记住位置和颜色。" : "记住它。"}
             </li>
-            <li>不相同则不操作。每一步仅接受一次输入。</li>
+            <li>
+              {dual ? (
+                <>
+                  位置与 <strong>N 步之前</strong>相同，点击“位置匹配”或按
+                  F；颜色相同，点击“颜色匹配”或按 J。
+                </>
+              ) : (
+                <>
+                  与 <strong>N 步之前</strong>的位置相同，就点击“匹配”或按空格。
+                </>
+              )}
+            </li>
+            <li>
+              {dual
+                ? "两者都相同就都按。不相同的维度不操作，每步每路只接受一次输入。"
+                : "不相同则不操作。每一步仅接受一次输入。"}
+            </li>
           </ol>
           <div className="rule-facts">
             <span>
@@ -790,11 +1005,31 @@ function Training({
               每步 2.5 秒
             </span>
             <span>亮起 0.5 秒</span>
-            <span>30 次有效判断</span>
+            <span>{dual ? "30 轮双路判断" : "30 次有效判断"}</span>
           </div>
           <p className="fine">
-            先展示 N 次作为记忆起点，不计分。结果以平衡准确率评定。
+            先展示 N 次作为记忆起点，不计分。
+            {dual
+              ? "两路各算平衡准确率，平均为综合分。"
+              : "结果以平衡准确率评定。"}
           </p>
+          {dual && (
+            <div
+              className="color-palette"
+              role="group"
+              aria-label="固定六色色板"
+            >
+              {COLORS.map((color) => (
+                <span key={color.name}>
+                  <i
+                    style={{ backgroundColor: color.value }}
+                    aria-hidden="true"
+                  />
+                  {color.name}
+                </span>
+              ))}
+            </div>
+          )}
         </section>
         <section className="settings card">
           <h2>准备好了吗？</h2>
@@ -813,7 +1048,7 @@ function Training({
             ))}
           </div>
           <p className="level-description">
-            回想 <strong>{n} 步</strong>前的位置 · 约{" "}
+            回想 <strong>{n} 步</strong>前的位置{dual ? "和颜色" : ""} · 约{" "}
             {Math.ceil(((n + TRIALS) * STEP_MS) / 1000)} 秒
           </p>
           <div className="identity-note">
@@ -868,12 +1103,16 @@ function Training({
 }
 
 function Records({
+  gameId,
+  onGame,
   user,
   revision,
   onLogin,
   onError,
   onUser,
 }: {
+  gameId: GameId;
+  onGame: (game: GameId) => void;
   user: User | null;
   revision: number;
   onLogin: () => void;
@@ -890,7 +1129,7 @@ function Records({
     setPage(1);
     setHistory(null);
     setBests([]);
-  }, [user?.id]);
+  }, [user?.id, gameId]);
   useEffect(() => {
     let cancelled = false;
     setHistory(null);
@@ -901,8 +1140,8 @@ function Records({
     void (async () => {
       try {
         const [h, b] = await Promise.all([
-          api<History & { user: User }>(`history?page=${page}`),
-          api<{ items: SavedResult[]; user: User }>("bests"),
+          api<History & { user: User }>(`history?page=${page}&game=${gameId}`),
+          api<{ items: SavedResult[]; user: User }>(`bests?game=${gameId}`),
         ]);
         if (cancelled) return;
         if (h.user.id !== user.id || b.user.id !== user.id) {
@@ -923,7 +1162,7 @@ function Records({
     return () => {
       cancelled = true;
     };
-  }, [user?.id, page, revision, refresh, onError, onUser]);
+  }, [user?.id, gameId, page, revision, refresh, onError, onUser]);
   return (
     <>
       <div className="records-title">
@@ -933,7 +1172,10 @@ function Records({
           <p>每一局，都是专注留下的痕迹。</p>
         </div>
         {user && (
-          <button className="secondary compact" onClick={() => go("n-back")}>
+          <button
+            className="secondary compact"
+            onClick={() => go(trainingPage(gameId))}
+          >
             开始训练
             <Icon name="arrow" size={16} />
           </button>
@@ -956,13 +1198,30 @@ function Records({
         </section>
       ) : (
         <>
+          <div className="mode-options" role="group" aria-label="记录模式">
+            {([GAME, COLOR_GAME] as const).map((id) => (
+              <button
+                key={id}
+                className={id === gameId ? "selected" : ""}
+                aria-pressed={id === gameId}
+                onClick={() => {
+                  setPage(1);
+                  onGame(id);
+                }}
+              >
+                {GAME_NAMES[id]}
+              </button>
+            ))}
+          </div>
           <div className="section-heading">
             <h2>各难度最佳</h2>
-            <span>空间 N-back · 平衡准确率</span>
+            <span>
+              {GAME_NAMES[gameId]} · {gameId === GAME ? "平衡准确率" : "综合分"}
+            </span>
           </div>
           <div className="bests-grid">
             {[1, 2, 3, 4, 5].map((n) => {
-              const best = bests.find((x) => x.n === n);
+              const best = bests.find((x) => x.n === n && x.game === gameId);
               return (
                 <section className="best-card" key={n}>
                   <span>{n}-back</span>
@@ -996,7 +1255,10 @@ function Records({
           ) : !history?.items.length ? (
             <div className="card empty-row">
               <p>还没有训练记录。</p>
-              <button className="text-link" onClick={() => go("n-back")}>
+              <button
+                className="text-link"
+                onClick={() => go(trainingPage(gameId))}
+              >
                 开始第一局
                 <Icon name="arrow" size={16} />
               </button>
@@ -1005,11 +1267,16 @@ function Records({
             <>
               <div className="table-scroll card">
                 <table>
+                  <caption className="visually-hidden">
+                    {GAME_NAMES[gameId]}训练历史
+                  </caption>
                   <thead>
                     <tr>
                       <th>完成时间</th>
                       <th>难度</th>
-                      <th>平衡准确率</th>
+                      <th>
+                        {gameId === GAME ? "平衡准确率" : "综合分 / 分项"}
+                      </th>
                       <th>命中</th>
                       <th>漏报</th>
                       <th>误报</th>
@@ -1026,11 +1293,29 @@ function Records({
                         <td className="table-score">
                           {formatScore(x.score)}
                           <small> 分</small>
+                          {x.game === COLOR_GAME && (
+                            <div className="channel-scores">
+                              位置 {formatScore(score(x.position))} · 颜色{" "}
+                              {formatScore(score(x.color))}
+                            </div>
+                          )}
                         </td>
-                        <td>{x.tp}</td>
-                        <td>{x.fn}</td>
-                        <td>{x.fp}</td>
-                        <td>{x.tn}</td>
+                        {(["tp", "fn", "fp", "tn"] as const).map((key) => (
+                          <td key={key}>
+                            {x.game === GAME ? (
+                              x[key]
+                            ) : (
+                              <>
+                                <div className="channel-stat">
+                                  位置 {x.position[key]}
+                                </div>
+                                <div className="channel-stat">
+                                  颜色 {x.color[key]}
+                                </div>
+                              </>
+                            )}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>

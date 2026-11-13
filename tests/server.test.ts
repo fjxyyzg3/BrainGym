@@ -6,7 +6,10 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Store } from "../src/server/store.js";
 import { buildApp } from "../src/server/app.js";
-import type { ResultInput } from "../src/shared/contracts.js";
+import type {
+  ResultInput,
+  SpatialResultInput,
+} from "../src/shared/contracts.js";
 
 const origin = "http://localhost:3000";
 async function fixture(
@@ -35,7 +38,7 @@ async function fixture(
   const res = await login(a.token);
   assert.equal(res.statusCode, 200);
   const cookie = String(res.headers["set-cookie"]).split(";")[0];
-  const payload = (): ResultInput => ({
+  const payload = (): SpatialResultInput => ({
     resultId: randomUUID(),
     startedByUserId: a.user.id,
     game: "spatial-n-back",

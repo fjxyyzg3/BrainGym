@@ -10,6 +10,14 @@ import { AppError } from "./errors.js";
 import { normalizeBasePath } from "../shared/paths.js";
 import { loginClientIp } from "./client-ip.js";
 import { pwaManifest } from "./pwa.js";
+import { GAME, isGameId } from "../shared/contracts.js";
+
+function queryGame(query: unknown) {
+  const value = (query as { game?: unknown }).game;
+  if (value === undefined) return GAME;
+  if (!isGameId(value)) throw new AppError(400, "INVALID_GAME", "游戏模式无效");
+  return value;
+}
 export async function buildApp(options: {
   store: Store;
   origin: string;
@@ -117,11 +125,14 @@ export async function buildApp(options: {
     const raw = (req.query as { page?: string }).page ?? "1";
     if (!/^\d+$/.test(raw) || Number(raw) < 1 || Number(raw) > 1000000)
       throw new AppError(400, "INVALID_PAGE", "页码无效");
-    return { ...store.history(user.id, Number(raw)), user };
+    return {
+      ...store.history(user.id, Number(raw), queryGame(req.query)),
+      user,
+    };
   });
   app.get(`${apiPath}bests`, async (req) => {
     const user = store.userForSession(req.cookies.bg_session, now());
-    return { items: store.bests(user.id), user };
+    return { items: store.bests(user.id, queryGame(req.query)), user };
   });
   if (options.staticRoot) {
     const workerPath = join(options.staticRoot, "sw.js");

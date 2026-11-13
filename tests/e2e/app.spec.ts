@@ -79,7 +79,10 @@ test("desktop guest completes a real game; login on result does not upload it", 
     path: join(screenshotDirectory, "desktop.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "开始训练", exact: true }).click();
+  await page
+    .getByRole("article", { name: "空间 N-back", exact: true })
+    .getByRole("button", { name: "开始训练", exact: true })
+    .click();
   await start(page);
   await finish(page);
   await expect(page.getByTestId("score")).toContainText("50.0");
@@ -263,25 +266,27 @@ test("invalid session preserves completed result and original login can retry", 
   await page.getByRole("button", { name: "重试保存" }).click();
   await expect(page.locator(".save-message")).toContainText("已保存到");
 });
-test("native browser background event aborts an authenticated game without saving", async ({
-  baseURL,
-}) => {
-  const run = spawnSync(
-    process.execPath,
-    ["scripts/check-native-visibility.mjs"],
-    {
-      encoding: "utf8",
-      timeout: 30000,
-      env: {
-        ...process.env,
-        PLAYWRIGHT_CHROMIUM_EXECUTABLE:
-          process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
-          chromium.executablePath(),
-        VISIBILITY_BASE_URL: baseURL,
-        NATIVE_VISIBILITY_DATABASE: process.env.E2E_DATABASE_PATH,
+for (const visibilityGame of ["spatial-n-back", "spatial-color-n-back"])
+  test(`native browser background event aborts an authenticated ${visibilityGame} game without saving`, async ({
+    baseURL,
+  }) => {
+    const run = spawnSync(
+      process.execPath,
+      ["scripts/check-native-visibility.mjs"],
+      {
+        encoding: "utf8",
+        timeout: 30000,
+        env: {
+          ...process.env,
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE:
+            process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
+            chromium.executablePath(),
+          VISIBILITY_BASE_URL: baseURL,
+          VISIBILITY_GAME: visibilityGame,
+          NATIVE_VISIBILITY_DATABASE: process.env.E2E_DATABASE_PATH,
+        },
       },
-    },
-  );
-  expect(run.status, run.stderr).toBe(0);
-  expect(run.stdout).toContain("PASS: native Chromium");
-});
+    );
+    expect(run.status, run.stderr).toBe(0);
+    expect(run.stdout).toContain("PASS: native Chromium");
+  });

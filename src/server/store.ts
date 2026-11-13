@@ -4,13 +4,15 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import {
   GAME,
+  isGameId,
   VERSION,
   type User,
   type ResultInput,
   type SavedResult,
   type History,
+  type GameId,
 } from "../shared/contracts.js";
-import { assertLevel, validateCounts, score } from "../shared/rules.js";
+import { assertLevel, validateCounts, scoreResult } from "../shared/rules.js";
 import { AppError } from "./errors.js";
 
 const digest = (value: string) =>
@@ -32,13 +34,17 @@ export function parseResult(value: unknown): ResultInput {
     !id.test(p.resultId) ||
     typeof p.startedByUserId !== "string" ||
     !id.test(p.startedByUserId) ||
-    p.game !== GAME ||
+    !isGameId(p.game) ||
     p.version !== VERSION
   )
     throw new AppError(400, "INVALID_RESULT", "对局标识或规则无效");
   try {
     assertLevel(p.n);
-    validateCounts(p);
+    if (p.game === GAME) validateCounts(p);
+    else {
+      validateCounts(p.position);
+      validateCounts(p.color);
+    }
   } catch {
     throw new AppError(400, "INVALID_RESULT", "难度或统计无效");
   }
@@ -52,15 +58,27 @@ export function parseResult(value: unknown): ResultInput {
   return {
     resultId: p.resultId,
     startedByUserId: p.startedByUserId,
-    game: GAME,
+    game: p.game,
     version: VERSION,
     n: p.n,
-    tp: p.tp,
-    fn: p.fn,
-    fp: p.fp,
-    tn: p.tn,
+    ...(p.game === GAME
+      ? { tp: p.tp, fn: p.fn, fp: p.fp, tn: p.tn }
+      : {
+          position: {
+            tp: p.position.tp,
+            fn: p.position.fn,
+            fp: p.position.fp,
+            tn: p.position.tn,
+          },
+          color: {
+            tp: p.color.tp,
+            fn: p.color.fn,
+            fp: p.color.fp,
+            tn: p.color.tn,
+          },
+        }),
     completedAt: p.completedAt,
-  };
+  } as ResultInput;
 }
 export class Store {
   private db: DatabaseSync;
@@ -218,7 +236,7 @@ export class Store {
         return toResult(row);
       }
       const receivedAt = new Date(now).toISOString();
-      const computed = score(payload);
+      const computed = scoreResult(payload);
       this.db
         .prepare("INSERT INTO results VALUES(?,?,?,?,?,?,?,?,?)")
         .run(
@@ -235,26 +253,26 @@ export class Store {
       return { ...payload, score: computed, receivedAt };
     });
   }
-  history(userId: string, page: number): History {
+  history(userId: string, page: number, game: GameId = GAME): History {
     const total = this.db
       .prepare(
         "SELECT count(*) AS count FROM results WHERE user_id=? AND game=? AND version=?",
       )
-      .get(userId, GAME, VERSION)!.count as number;
+      .get(userId, game, VERSION)!.count as number;
     const rows = this.db
       .prepare(
         "SELECT payload,score,received_at FROM results WHERE user_id=? AND game=? AND version=? ORDER BY completed_at DESC,received_at DESC,result_id DESC LIMIT 20 OFFSET ?",
       )
-      .all(userId, GAME, VERSION, (page - 1) * 20) as unknown as ResultRow[];
+      .all(userId, game, VERSION, (page - 1) * 20) as unknown as ResultRow[];
     return { items: rows.map(toResult), total, page, pageSize: 20 };
   }
-  bests(userId: string): SavedResult[] {
+  bests(userId: string, game: GameId = GAME): SavedResult[] {
     return (
       this.db
         .prepare(
           `SELECT payload,score,received_at FROM (SELECT *,ROW_NUMBER() OVER(PARTITION BY n ORDER BY score DESC,received_at ASC,result_id ASC) AS rn FROM results WHERE user_id=? AND game=? AND version=?) WHERE rn=1 ORDER BY n`,
         )
-        .all(userId, GAME, VERSION) as unknown as ResultRow[]
+        .all(userId, game, VERSION) as unknown as ResultRow[]
     ).map(toResult);
   }
   assertAvailable(): void {

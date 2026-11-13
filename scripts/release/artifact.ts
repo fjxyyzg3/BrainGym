@@ -142,6 +142,7 @@ export async function prepareCandidate(
   for (const base of ["/", "/braingym/"]) {
     await runNpm(["run", "test:e2e"], source, {
       ...env,
+      NODE_ENV: "production",
       E2E_BASE_PATH: base,
       E2E_DATABASE_PATH: join(
         directory,

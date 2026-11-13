@@ -12,7 +12,7 @@
 
 - 环境配置最初 5 项断言因原行为失败；实现后通过。临时目录联接和临时 Git 提交中的符号链接均被拒绝，未创建越界数据库。普通开发 API、预览和 CLI 使用 `.runtime/development/`，端口默认 3002/5173；开发库越界、误用 3001、模式冲突和未指定测试库均拒绝。
 - 发布入口最初不存在，对应命令验收失败；实现后 help 和缺失候选的拒绝验证通过，后者不访问私有 Hub。临时 Git 仓库验证 main 限制、未提交源码拒绝及文档/本地元数据的边界；篡改程序、依赖、额外文件及不完整证据均拒绝。
-- `node --import tsx --test tests/release-deploy.test.ts tests/release-artifact.test.ts tests/environment.test.ts`：28 项通过。包括真实文件内容恢复、Stop 回复丢失、新版启动失败、就绪超时、原本停止、恢复失败后拒绝覆盖、并发锁，以及发布进程被终止后依据持久日志恢复；数据库内容没有回滚。
+- 发布状态机、候选与环境回归共 28 项，在 `npm test` 中通过。包括真实文件内容恢复、Stop 回复丢失、新版启动失败、就绪超时、原本停止、恢复失败后拒绝覆盖、并发锁，以及发布进程被终止后依据持久日志恢复；数据库内容没有回滚。
 - `node --import tsx --test tests/release-hub.test.ts`：5 项通过。使用真实 Windows 文件句柄证明配置可读但不能写入或替换，使用真实 SQLite 连接证明打开的数据库不能作离线备份，关闭后完整目录可备份；原子替换保留旧字节及访问权限。重复保护目录曾复现所有权权限异常，修正为仅持久化访问规则后，同一回归通过。
 - `npm run verify:release`：真实隔离 Registry、Hub 和 Gateway 验收通过。证明 Stop 后数据库备份失败能恢复旧服务、正常迁移保留旧 Token/会话/历史、新成绩可保存、退出后旧会话失效、失败发布恢复旧程序字节。其它应用待加载新增、删除、参数变更、待重启、基线缺失及文件保护冲突均在目标 Stop 前拒绝；非目标实例未变。无 Reload 的发布不会覆盖已加载配置基线。
 
@@ -33,6 +33,8 @@
 | `npm run verify:release`                                                       | 真实隔离 Hub 发布、拒绝及恢复场景通过                                   |
 | `docker --config <本机配置目录> build -t braingym:verify-isolation-20261113 .` | 独立镜像构建通过                                                        |
 | `scripts/verify-docker.ps1 -Image braingym:verify-isolation-20261113`          | 页面、CLI、登录、计分、幂等及容器重建后数据保留通过；专用容器和卷已清理 |
+
+首次快照演练因继承 `NODE_ENV=test` 生成 React 开发版，PWA 浏览器测试按预期失败，未生成可发布证据。构建入口现固定 production，浏览器验收的更新版本也按 production 构建；以 `NODE_ENV=test` 再次运行构建后，产物与普通生产构建一致。
 
 本机浏览器检查使用已安装 Chrome。发行的 CSS/JS 内容名分别为 `index-CCoYB9Fk.css` 和 `index-Kt4qGQ_7.js`，没有为前缀路径重新构建。
 

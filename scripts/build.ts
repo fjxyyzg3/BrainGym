@@ -51,7 +51,10 @@ if (
       const result = spawnSync(process.execPath, args, {
         stdio: "inherit",
         windowsHide: true,
-        env: withoutControlCredentials(process.env),
+        env: {
+          ...withoutControlCredentials(process.env),
+          NODE_ENV: "production",
+        },
       });
       if (result.status !== 0) throw new Error("构建命令失败");
     }

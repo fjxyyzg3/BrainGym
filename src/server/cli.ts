@@ -1,10 +1,11 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Store } from "./store.js";
+import { readEnvironment } from "./environment.js";
 
 export function runCli(
   args: string[],
-  path = process.env.DATABASE_PATH ?? "data/braingym.sqlite",
+  path = readEnvironment().databasePath,
 ): unknown {
   const [command, value] = args;
   if (!command || command === "help")
@@ -38,6 +39,10 @@ if (
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 ) {
   try {
+    const selected = readEnvironment();
+    console.error(
+      `BrainGym CLI environment=${selected.environment} database=${selected.databasePath}`,
+    );
     console.log(JSON.stringify(runCli(process.argv.slice(2)), null, 2));
   } catch (error) {
     console.error(error instanceof Error ? error.message : "命令失败");

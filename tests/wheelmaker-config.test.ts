@@ -7,6 +7,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  writeFileSync,
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -71,6 +72,27 @@ test("public verification rejects invalid private origins before reading fixture
   }
 });
 
+test("legacy public verification and formal fixture creation cannot bypass isolated rehearsal", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "braingym-retired-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  for (const script of [
+    "scripts/verify-wheelmaker-public.mjs",
+    "scripts/verify-wheelmaker-preflight.mjs",
+    "scripts/prepare-wheelmaker-verification.mjs",
+  ]) {
+    const run = spawnSync(process.execPath, [resolve(script)], {
+      cwd: directory,
+      env: environment(origin),
+      encoding: "utf8",
+      windowsHide: true,
+    });
+    assert.notEqual(run.status, 0);
+    assert.match(run.stderr, /retired/);
+    assert.doesNotMatch(run.stderr, /ENOENT|private\.json/);
+    assert.equal(existsSync(join(directory, "data")), false);
+  }
+});
+
 test(
   "Hub definition requires a private HTTPS origin before creating a preview",
   { skip: process.platform !== "win32" },
@@ -82,6 +104,10 @@ test(
     copyFileSync(
       "scripts/configure-wheelmaker.ps1",
       join(directory, "scripts/configure-wheelmaker.ps1"),
+    );
+    copyFileSync(
+      "scripts/release-windows.ps1",
+      join(directory, "scripts/release-windows.ps1"),
     );
     copyFileSync(
       "src/server/main.ts",
@@ -109,6 +135,28 @@ test(
       assert.equal(existsSync(join(directory, "data")), false);
       if (value) assert.equal(run.stderr.includes(value), false);
     }
+    const hub = join(directory, "hub"),
+      production = join(directory, "production");
+    mkdirSync(hub);
+    const current = JSON.stringify({
+      apps: [
+        {
+          id: "braingym-process",
+          name: "BrainGym",
+          executable: process.execPath,
+          args: ["dist/server/server/main.js"],
+          cwd: directory,
+          env: {
+            APP_ORIGIN: origin,
+            HOST: "127.0.0.1",
+            PORT: "3001",
+            COOKIE_SECURE: "true",
+            DATABASE_PATH: join(directory, "data/braingym.sqlite"),
+          },
+        },
+      ],
+    });
+    writeFileSync(join(hub, "config.json"), current);
     const run = spawnSync(
       "pwsh",
       [
@@ -116,6 +164,10 @@ test(
         "-NonInteractive",
         "-File",
         join(directory, "scripts/configure-wheelmaker.ps1"),
+        "-StateDir",
+        hub,
+        "-ProductionDir",
+        production,
       ],
       {
         env: environment(origin),
@@ -133,6 +185,30 @@ test(
     assert.equal(definition.env.HOST, "127.0.0.1");
     assert.equal(definition.env.PORT, "3001");
     assert.equal(definition.env.COOKIE_SECURE, "true");
+    assert.equal(definition.cwd, production);
+    assert.equal(
+      definition.env.DATABASE_PATH,
+      join(directory, "data/braingym.sqlite"),
+    );
+    assert.equal(definition.env.BRAINGYM_ENV, "production");
+    const refused = spawnSync(
+      "pwsh",
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        join(directory, "scripts/configure-wheelmaker.ps1"),
+        "-StateDir",
+        hub,
+        "-ProductionDir",
+        production,
+        "-Apply",
+      ],
+      { env: environment(origin), encoding: "utf8", windowsHide: true },
+    );
+    assert.notEqual(refused.status, 0);
+    assert.match(refused.stderr, /bypass rehearsal/);
+    assert.equal(readFileSync(join(hub, "config.json"), "utf8"), current);
     assert.equal(run.stdout.includes(origin), false);
   },
 );

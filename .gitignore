@@ -6,6 +6,14 @@ data/
 test-results/
 playwright-report/
 .env
+.env.*.local
+.env.*
+!.env.example
+!.env.*.example
+.runtime/
+.agents/
+.claude/
+.skill-source-lock.json
 .worktree/
 *.sqlite
 *.sqlite-shm

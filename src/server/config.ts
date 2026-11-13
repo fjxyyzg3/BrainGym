@@ -1,8 +1,12 @@
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { normalizeBasePath } from "../shared/paths.js";
+import { readEnvironment } from "./environment.js";
 export function readConfig(env: NodeJS.ProcessEnv = process.env) {
-  const port = Number(env.PORT ?? 3000);
+  const selected = readEnvironment(env);
+  const port = Number(
+    env.PORT ?? (selected.environment === "development" ? 3002 : 3000),
+  );
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("PORT 无效");
   const origin = env.APP_ORIGIN ?? `http://127.0.0.1:${port}`;
@@ -15,6 +19,13 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     basePath = normalizeBasePath(env.APP_BASE_PATH);
   const serviceId = env.WHEELMAKER_SERVICE_ID ?? "braingym",
     host = env.HOST ?? "127.0.0.1";
+  if (
+    selected.environment === "development" &&
+    (port === 3001 ||
+      host !== "127.0.0.1" ||
+      !["127.0.0.1", "localhost"].includes(new URL(origin).hostname))
+  )
+    throw new Error("开发环境仅允许独立回环端口和本机 Origin");
   if (
     managed &&
     (!/^[a-z][a-z0-9-]{0,62}$/.test(serviceId) ||
@@ -34,7 +45,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env) {
     stateDir: resolve(
       env.WHEELMAKER_STATE_DIR ?? resolve(homedir(), ".wheelmaker"),
     ),
-    databasePath: resolve(env.DATABASE_PATH ?? "data/braingym.sqlite"),
+    ...selected,
     secure:
       env.COOKIE_SECURE === "true" ||
       (env.COOKIE_SECURE !== "false" && env.NODE_ENV === "production"),

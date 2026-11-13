@@ -7,11 +7,15 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "tsx watch src/server/main.ts",
-    "web": "vite --host 127.0.0.1",
-    "build": "vite build && tsc -p tsconfig.server.json",
-    "start": "node dist/server/server/main.js",
-    "cli": "tsx src/server/cli.ts",
+    "dev": "tsx scripts/development.ts api",
+    "web": "tsx scripts/development.ts web",
+    "build": "tsx scripts/build.ts",
+    "start": "tsx scripts/development.ts preview",
+    "cli": "tsx scripts/development.ts cli",
+    "release": "tsx scripts/release.ts",
+    "rehearse": "tsx scripts/release.ts rehearse",
+    "cli:production": "tsx scripts/release.ts cli --",
+    "verify:release": "tsx scripts/verify-release-isolated.ts",
     "test": "tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test"

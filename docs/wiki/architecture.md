@@ -1,4 +1,4 @@
-> 摘要：BrainGym 的模块、双路径运行、PWA 公共外壳缓存、WheelMaker 生命周期及身份和代理信任边界。
+> 摘要：BrainGym 的环境与发布边界、模块、双路径运行、PWA 缓存、WheelMaker 生命周期及会话信任边界。
 
 # 架构与数据边界
 
@@ -14,11 +14,25 @@ BrainGym 使用 React 和 Vite 构建浏览器界面，Fastify 在生产环境�
 | `src/server/store.ts`                            | SQLite 初始化、事务、凭据与数据访问                     |
 | `src/server/cli.ts`                              | 用户创建与 Token 发放、换发和吊销                       |
 | `src/server/config.ts`                           | 运行环境校验、路径和托管配置                            |
+| `src/server/environment.ts`                      | 开发、正式、测试选择及独立数据库路径校验                |
+| `scripts/release/`                               | Git 候选、验收证据、单应用控制、全局 Reload 保护及恢复  |
 | `src/server/main.ts`                             | Node 根进程的启动、健康检查和有界关闭                   |
 | `src/server/managed.ts`、`json-lines.ts`         | Monitor 控制协议、身份回显、健康事件及有界 UTF-8 帧解析 |
 | `src/server/forwarding.ts`                       | 持续 IPC 注册、最新发布状态及断线重连                   |
 | `src/server/client-ip.ts`                        | 登录限流所用客户端 IP 的校验和规范化                    |
 | `src/shared/paths.ts`、`src/client/base-path.ts` | 服务端基础路径校验和浏览器运行时路径读取                |
+
+## 开发、数据与发布边界
+
+开发入口使用 `BRAINGYM_ENV=development`，API 回环 3002、Vite 5173，账户和成绩留在当前工作区 `.runtime/development/`。两端从同一开发配置读取端口和 Origin。开发库不能越过该目录或通过链接指向正式数据；测试显式指定隔离数据库。既有 Docker 的 production 标记和显式数据库仍兼容。
+
+正式程序的目标目录是仓库外 `D:\Apps\BrainGym`，正式数据库保持现有 Hub 定义所指的绝对位置。发布复制已演练的程序及生产依赖，不复制开发账户、私有环境文件或源码工作区。首次迁移前仍需保护原仓库 dist，实际迁移完成状态以[验收记录](../verification/dev-production-isolation.md)为准。
+
+代码交付阶段先完成隔离验证、提交、合入并推送 main，正式迁移随后从稳定 main 工作区显式执行。Git 合入不触发发布；迁移未通过不能认定整个任务完成。候选与验收证据绑定已提交的运行源码内容、锁文件、Node 环境和文件摘要；main 内容或产物变化时拒绝使用失效证据。
+
+发布工具拥有配置及文件变更，Hub 拥有进程树。Stop、Start 按 BrainGym 应用标识操作，Reload 则作用于整个配置。定义不变不 Reload；定义变化时要确认非目标定义已加载且无待加载变化，并在配置保护下完成原子替换和全局重载。简化 Monitor 快照不包含完整定义，不能代替已加载配置基线。未 Reload 的发布不能把当前磁盘配置标为已加载。
+
+维护期从 Stop 请求开始。发布日志在操作前记录原状态、请求和变更意图；停服后备份失败也必须恢复旧服务。程序部分替换或定义变化后，只恢复本工具修改的程序和定义；数据库继续保留，不自动回滚。恢复失败及意外中断保留私有日志并阻止覆盖。详细命令和失败处理见[运维流程](operations.md#接入-wheelmaker)。
 
 ## 运行路径与生命周期
 

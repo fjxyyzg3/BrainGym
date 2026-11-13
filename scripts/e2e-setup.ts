@@ -19,6 +19,7 @@ export default async function setup() {
     stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
+      BRAINGYM_ENV: "test",
       PORT: port,
       APP_ORIGIN: origin,
       DATABASE_PATH: process.env.E2E_DATABASE_PATH,

@@ -70,6 +70,7 @@ try {
     DATABASE_PATH: database,
     COOKIE_SECURE: "false",
     NODE_ENV: "test",
+    BRAINGYM_ENV: "test",
   });
   await ready(`http://127.0.0.1:${apiPort}/api/health`, checkApi);
   // Keep the repository's Vite config; isolate only the listener and proxy ports.

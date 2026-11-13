@@ -20,9 +20,10 @@
 ## 开发与启动
 
 - 使用 npm 和已提交的 `package-lock.json`；首次安装运行 `npm ci`。
-- 开发需两个终端：API 终端先设置 `$env:APP_ORIGIN='http://127.0.0.1:5173'` 再运行 `npm run dev`（3000）；另一终端运行 `npm run web`（5173），浏览器访问 `http://127.0.0.1:5173`，API 由 Vite 代理。
-- 生产构建运行 `npm run build`，随后 `npm start`；默认入口为 `http://127.0.0.1:3000`。CLI 使用 `npm run cli -- <命令>`，具体账户命令见 README。
-- `npm start` 不自动加载 `.env`；需要时使用 `node --env-file=.env dist/server/server/main.js`。`APP_ORIGIN` 必须是实际浏览器 origin，且不带路径或尾斜杠。
+- 开发需两个终端：`npm run dev` 启动 API（回环 3002），`npm run web` 启动 Vite（5173）。两者读取 `.env.development.local` 的 `DEV_API_PORT` / `DEV_WEB_PORT`，从 Vite 地址访问，API 由同源代理。
+- `npm run build` 后的 `npm start` 是本机生产构建预览（3002），仍使用开发库；普通 `npm run cli -- <命令>` 也默认开发库 `.runtime/development/braingym.sqlite`。正式管理显式使用 `npm run cli:production -- <命令>`，读取既有 Hub 定义，不回退默认库。
+- 正式程序固定在 `D:\Apps\BrainGym`。新功能先演练，代码阶段合入并推送 main 后，显式执行 `npm run release -- deploy --candidate <目录>`；只有正式迁移与验收完成才报告整体完成。阶段间从稳定 main 重新建立 Git 上下文，不能依赖已清理 worktree。
+- 发布前运行 `npm run rehearse` 准备可验证候选；日常构建、测试和 Git 操作不发布。`.env.production.local` 仅供正式管理/控制入口读取，认证不传开发子进程；真实 `APP_ORIGIN` 以现有私有定义为准，无路径或尾斜杠。
 
 ## 验证
 
@@ -41,7 +42,8 @@
 - 成绩归属由有效服务端会话确定；`startedByUserId` 只作开局身份前置校验。保持 `(user_id, result_id)` 幂等保存、冲突拒绝及服务端复算分数。
 - `APP_BASE_PATH` 在运行时选择 `/` 或 `/braingym/`；资源、API、重定向与 Cookie Path 都必须兼容，不硬编码根路径或为前缀另建一份构建。
 - WheelMaker 直接托管前台 Node 根进程；托管 stdout 仅承载协议，诊断写 stderr。普通启动不依赖 stdin；Forwarding 故障不应终止核心 HTTP / SQLite 服务。
-- 数据库默认位于 `data/braingym.sqlite`。保留用户、Token 与历史；备份按运维流程停止所有写入进程并复制完整数据库目录，不只复制活动中的 SQLite 主文件。日常重启不使用 `docker compose down -v`。
+- 正式数据库沿用既有配置的绝对路径（原默认 `data/braingym.sqlite`），与正式程序及开发库分离。保留用户、Token、会话与历史；备份按运维流程停止所有写入进程并复制完整数据库目录，不只复制活动中的 SQLite 主文件。发布恢复只处理程序和本次定义变更，不回滚数据库。日常重启不使用 `docker compose down -v`。
+- Monitor 的 Stop/Start 按 appId 控制，Reload 是全局操作。定义未变不 Reload；定义变化需已加载非目标基线、变更冻结及文件保护，不能用当前磁盘配置或简化快照推定其它定义已加载。Stop 请求起即承担恢复责任，包括停服后备份失败。
 - 不提交 `.env`、Token、SQLite、依赖、构建或验收临时数据；部署、Monitor 操作与 Hub 配置写入需在当前任务授权范围内执行。
 
 ## 网络安全与凭据
@@ -49,7 +51,7 @@
 以下约束参考 BillBoard 的网络入口约定和 `billboard-security-review` 清单，按 BrainGym 的 Fastify、SQLite 与 WheelMaker 边界执行。
 
 - 生产公网登录和写入必须经过 HTTPS；`APP_ORIGIN` 精确匹配实际浏览器 origin，`COOKIE_SECURE=true`。本机 HTTP 仅用于开发和健康检查，不作为公网明文登录通道。
-- 宿主机端口仅绑定回环：普通运行默认 `127.0.0.1:3000`，WheelMaker 使用 `127.0.0.1:3001`；Compose 保持 `127.0.0.1:${PORT:-3000}:3000`，禁止宿主机绑定 `0.0.0.0` 或裸端口发布。容器内部监听 `0.0.0.0` 不等于允许宿主机对公网发布。
+- 宿主机端口仅绑定回环：开发 API/预览默认 `127.0.0.1:3002`，WheelMaker 使用 `127.0.0.1:3001`；Compose 保持 `127.0.0.1:${PORT:-3000}:3000`，禁止宿主机绑定 `0.0.0.0` 或裸端口发布。容器内部监听 `0.0.0.0` 不等于允许宿主机对公网发布。
 - 普通模式不信任转发头；托管模式只接受可信 IPv4 回环对端传入的单值客户端 IP，地址不可确认时拒绝登录，不回退共享限流额度。外部转发访问限制、转发头清洗及日志控制须核验真实配置，不能从示例配置推定已安全。
 - 按实际 HTTPS 入口核验 CSP、`X-Content-Type-Options`、`Referrer-Policy`、防嵌入策略及适用的 HSTS / `Permissions-Policy`；不得无证据声称代理已补齐安全头。修改策略需验证静态资源、登录及前缀路径，不能为消除报错直接放宽 CSP 或来源校验。
 - 路径前缀、Cookie Path 和 SameSite 不隔离同 Origin 应用；新增同源应用或改变发布权限时重新核验信任边界，引入不可信应用需独立 Origin。

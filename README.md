@@ -12,30 +12,45 @@
 
 新版本在后台准备，不强制刷新；关闭所有 BrainGym 标签页和独立窗口后，下次打开使用已准备的新版本。安装、更新与缓存排查见 [PWA 运维说明](docs/wiki/operations.md#安装与使用-pwa)。
 
-## 本地启动
+## 本机开发与演练
 
 需要 Node.js 24 或更高版本。
 
 ```powershell
 npm ci
-npm run build
-npm run cli -- user:create "我的训练账户"
-npm start
+npm run cli -- user:create "开发练习账户"
+npm run dev
 ```
 
-打开 **http://127.0.0.1:3000**。创建命令输出用户 ID 和一次性的明文 Token，请妥善保存；在页面选择“Token 登录”后粘贴 Token。用户与记录默认保存在 `data/braingym.sqlite`，创建用户和启动服务必须使用相同的数据库路径。
+另开一个终端执行 `npm run web`，打开 **http://127.0.0.1:5173**。API 默认绑定 `127.0.0.1:3002`，Vite 同源代理 API；两者不会占用正式托管的 3001，也不占用既有 Docker 默认 3000。
 
-`.env.example` 记录可用配置。Node 进程可用 `node --env-file=.env dist/server/server/main.js` 加载自行创建的 `.env`；`npm start` 本身使用进程环境及默认值，不自动读取该文件。
+开发启动、预览和普通 CLI 默认使用当前工作区 `.runtime/development/braingym.sqlite`，开发身份与成绩不转入正式环境。创建命令只在本次输出明文 Token，请妥善保存；CLI 环境提示写 stderr，stdout 保持 JSON。开发数据库误指其它目录、环境冲突或端口冲突时直接失败。
 
-开发时开两个终端：`npm run dev` 启动 API（3000），`npm run web` 启动 Vite（默认 5173）。此时将 API 的 `APP_ORIGIN` 设为 `http://127.0.0.1:5173`，从该地址访问前端；浏览器的 API 请求由 Vite 同源代理。
+可将 `.env.example` 复制为未跟踪的 `.env.development.local`，通过 `DEV_API_PORT`、`DEV_WEB_PORT` 调整开发端口；API 与 Vite 读取同一配置。`npm run build` 后运行 `npm start` 可从 `http://127.0.0.1:3002` 预览生产构建，仍使用开发库。构建只更新当前开发工作区的 `dist`，不触及正式程序。
 
 ## WheelMaker 托管
 
-构建后，先从私有部署配置设置当前终端的 `APP_ORIGIN`，再运行 `./scripts/configure-wheelmaker.ps1` 预览当前 Windows Hub 的 BrainGym 定义；也可通过 `-AppOrigin` 显式传入该值。入口必须是无路径、查询参数、fragment 或凭据的 HTTPS origin，缺失或无效时脚本直接退出。加上 `-Apply` 后会备份并合并该定义。随后在桌面客户端的当前 Hub 中 Reload Monitor，确认 BrainGym 就绪并检查 Forwarding。
+正式程序的目标目录固定为 `D:\Apps\BrainGym`，现有 WheelMaker 直接启动 Node 根进程；数据库沿用现有定义的绝对路径，入口、`/braingym/`、3001 和应用标识保持。日常开发、构建、测试、提交和合并均不会发布。
 
-托管入口为私有 `APP_ORIGIN` 加 `/braingym/`，回环服务为 `http://127.0.0.1:3001`。Hub 直接托管 Node 根进程，沿用 `data/braingym.sqlite`。同一份构建根据 `APP_BASE_PATH` 支持普通运行的 `/` 和托管运行的 `/braingym/`。仓库中的 `apps.example.com` 等域名仅为保留示例，不能作为实际部署值；真实入口与含入口的原始证据不入库。
+首次迁移完成前，旧实例仍可能读取原仓库 `dist`。原主工作区存在旧默认库且没有正式发布标记时，`npm run build` 会拒绝覆盖；使用独立 worktree 或演练候选目录，直到迁移验收完成。当前正式位置以验收记录为准。
 
-完整的加载、更新、故障处理和信任边界见 [WheelMaker 运维步骤](docs/wiki/operations.md#接入-wheelmaker)。实际完成情况见 [WheelMaker 验收记录](docs/verification/wheelmaker-integration.md)；配置合并后仍需检查 Monitor 和真实公网业务。
+新功能先演练，代码通过验证后合入并推送 main，再显式发布。运行以下命令时保持当前 main 的运行源码无未提交修改：
+
+```powershell
+npm run rehearse
+# 使用上条命令输出的 candidate 目录，保持引号。
+$releaseCandidate = '<candidate 目录>'
+npm run release -- deploy --candidate $releaseCandidate
+npm run release -- status
+```
+
+`rehearse` 在隔离候选中完成检查、双路径浏览器测试、Vite 演练、生产依赖准备及真实隔离 Hub 验证；功能分支也可演练，但 `deploy` 只接受可对应已提交 main 的有效候选。发布时短暂停服，备份后复制已验证产物，不在正式目录构建或安装依赖。失败恢复原程序、定义和运行状态，不回滚数据库；恢复未完成时用 `npm run release -- recover` 处理，后续发布会拒绝覆盖现场。
+
+发布控制复用现有 Registry 认证。若 Hub 配置不含控制 Token，在主仓库未跟踪的 `.env.production.local` 中设置 `BRAINGYM_REGISTRY_TOKEN`，自定义 Hub 时设置 `WHEELMAKER_STATE_DIR`；不要把认证写入开发配置或聊天记录。真实入口从现有 Hub 定义读取，不从示例域名推断。
+
+定义未变的发布不 Reload。首次迁移等定义变更需要全局 Reload，必须证明其它应用无待加载变化并取得配置文件保护；只有 BrainGym 一项时也核对实际 Monitor 集合，存在其它应用但缺少可信已加载基线时在停服前拒绝。`configure-wheelmaker.ps1` 仅预览正式目录定义，`-Apply` 已停用；历史公网预检及身份准备脚本也已退役，防止切走正式 Forwarding 或写入正式测试身份。
+
+完整步骤见 [运维 Wiki](docs/wiki/operations.md#接入-wheelmaker)，本次实际状态见 [环境隔离验收记录](docs/verification/dev-production-isolation.md)。历史验收不代表本次已完成真实迁移。
 
 ## Docker
 
@@ -52,11 +67,15 @@ docker compose exec braingym node dist/server/server/cli.js user:create "我的�
 
 ## Token 运维
 
+开发账户使用普通 CLI；正式账户使用显式入口，它读取现有 Hub 定义并执行现役程序的 CLI，不依赖 Registry 在线登录：
+
 ```powershell
 npm run cli -- user:list
 npm run cli -- token:rotate <user-id>
 npm run cli -- token:revoke <user-id>
 npm run cli -- token:issue <user-id>
+npm run cli:production -- user:list
+npm run cli:production -- token:rotate <user-id>
 ```
 
 `user:create` 同时创建用户并发放 Token。`rotate` 换发 Token，并立即使旧 Token 与该用户全部会话失效，历史保留；`revoke` 停止该用户所有登录；`issue` 仅在没有有效 Token 时发放。数据库只保存凭据摘要，无法找回旧明文。在容器中运行时，将命令前缀替换为 `docker compose exec braingym node dist/server/server/cli.js`。

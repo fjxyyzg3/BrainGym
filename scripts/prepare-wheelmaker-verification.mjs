@@ -10,6 +10,10 @@ import { pathToFileURL } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 
+throw new Error(
+  "Legacy formal fixture creation is retired; use npm run verify:release with an isolated database",
+);
+
 const directory = resolve("data/wheelmaker-verification");
 mkdirSync(directory, { recursive: true });
 const privatePath = resolve(directory, "private.json");

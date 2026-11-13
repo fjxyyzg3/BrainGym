@@ -6,9 +6,11 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $verificationRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../data/wheelmaker-verification'))
+$releaseVerificationRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../.runtime/release-verification'))
 $resolvedStateDir = [IO.Path]::GetFullPath($StateDir)
 $resolvedExecutable = [IO.Path]::GetFullPath($Executable)
-if (-not $resolvedStateDir.StartsWith($verificationRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'State directory is outside isolated verification root' }
+if ($resolvedStateDir.StartsWith($releaseVerificationRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { $verificationRoot = $releaseVerificationRoot }
+elseif (-not $resolvedStateDir.StartsWith($verificationRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'State directory is outside isolated verification root' }
 if ($resolvedStateDir.Contains('"') -or $resolvedExecutable.Contains('"')) { throw 'Invalid process path' }
 Add-Type -TypeDefinition @'
 using System;

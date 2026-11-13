@@ -1,6 +1,7 @@
 param(
   [string]$StateDir = (Join-Path $env:USERPROFILE '.wheelmaker'),
   [string]$AppOrigin = $env:APP_ORIGIN,
+  [string]$ProductionDir = 'D:\Apps\BrainGym',
   [switch]$Apply
 )
 $ErrorActionPreference = 'Stop'
@@ -14,47 +15,22 @@ if ([string]::IsNullOrWhiteSpace($AppOrigin) -or
 }
 $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $hubHome = [IO.Path]::GetFullPath($StateDir)
-$nodeExecutable = (Get-Command node -CommandType Application | Select-Object -First 1).Source
-if (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot 'dist/server/server/main.js'))) { throw 'Build BrainGym before configuring Hub' }
-$definition = [ordered]@{
-  id='braingym-process'; name='BrainGym'; executable=$nodeExecutable
-  args=@('dist/server/server/main.js'); cwd=$repositoryRoot
-  env=[ordered]@{
-    HOST='127.0.0.1'; PORT='3001'; APP_BASE_PATH='/braingym/'
-    APP_ORIGIN=$AppOrigin; COOKIE_SECURE='true'; NODE_ENV='production'
-    DATABASE_PATH=(Join-Path $repositoryRoot 'data/braingym.sqlite')
-    WHEELMAKER_STATE_DIR=$hubHome; WHEELMAKER_SERVICE_ID='braingym'
-  }
-}
-$verificationDirectory = Join-Path $repositoryRoot 'data/wheelmaker-verification'
-[IO.Directory]::CreateDirectory($verificationDirectory) | Out-Null
+if ($Apply) { throw 'Use npm run release -- deploy --candidate <verified-path>; direct configuration writes bypass rehearsal and are refused' }
+$settings = [IO.File]::ReadAllText((Join-Path $hubHome 'config.json')) | ConvertFrom-Json
+$existing = @($settings.apps | Where-Object { $_.id -eq 'braingym-process' })
+if ($existing.Count -ne 1 -or -not $existing[0].env.DATABASE_PATH) { throw 'A unique existing BrainGym definition and explicit database are required' }
+if ($existing[0].env.APP_ORIGIN -cne $AppOrigin) { throw 'Origin differs from the existing definition; refusing an implicit entry change' }
+$definition = $existing[0] | ConvertTo-Json -Depth 20 | ConvertFrom-Json
+$originalCwd = [IO.Path]::GetFullPath($definition.cwd)
+$databasePath = $definition.env.DATABASE_PATH
+if (-not [IO.Path]::IsPathRooted($databasePath)) { $databasePath = Join-Path $originalCwd $databasePath }
+$definition.cwd = [IO.Path]::GetFullPath($ProductionDir)
+if ($definition.cwd -eq $repositoryRoot) { throw 'Production program must be outside the development directory' }
+$definition.env.DATABASE_PATH = [IO.Path]::GetFullPath($databasePath)
+$definition.env | Add-Member -NotePropertyName BRAINGYM_ENV -NotePropertyValue 'production' -Force
+$verificationDirectory = Join-Path $repositoryRoot '.runtime/releases/config-preview'
+& (Join-Path $PSScriptRoot 'release-windows.ps1') -Action protect -Path $verificationDirectory
 $previewPath = Join-Path $verificationDirectory 'braingym-app.json'
 $utf8 = New-Object Text.UTF8Encoding($false)
 [IO.File]::WriteAllText($previewPath,($definition | ConvertTo-Json -Depth 10),$utf8)
-if (-not $Apply) { @{applied=$false;preview=$previewPath;appId=$definition.id} | ConvertTo-Json -Compress; exit }
-$configPath = Join-Path $hubHome 'config.json'
-$originalBytes = [IO.File]::ReadAllBytes($configPath)
-$settings = [Text.Encoding]::UTF8.GetString($originalBytes) | ConvertFrom-Json
-$apps = @($settings.apps | Where-Object { $null -ne $_ })
-$existing = @($apps | Where-Object {$_.id -eq $definition.id})
-if ($existing.Count -gt 1 -or ($existing.Count -eq 1 -and [IO.Path]::GetFullPath($existing[0].cwd) -ne $repositoryRoot)) { throw 'Application ID belongs to another definition; refusing overwrite' }
-$nextApps = @($apps | Where-Object {$_.id -ne $definition.id}) + @($definition)
-if ($nextApps.Count -gt 64) { throw 'Hub application limit exceeded' }
-$settings | Add-Member -NotePropertyName apps -NotePropertyValue $nextApps -Force
-$candidate = $settings | ConvertTo-Json -Depth 100
-$null = $candidate | ConvertFrom-Json
-$acl = Get-Acl -LiteralPath $configPath
-$temporaryDirectory = Join-Path $hubHome '.tmp'
-[IO.Directory]::CreateDirectory($temporaryDirectory) | Out-Null
-$suffix = [guid]::NewGuid().ToString('N')
-$backupPath = Join-Path $temporaryDirectory "braingym-config-backup-$suffix.json"
-$candidatePath = Join-Path $temporaryDirectory "braingym-config-candidate-$suffix.json"
-foreach ($path in @($backupPath,$candidatePath)) {
-  $stream = [IO.File]::Open($path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write)
-  $stream.Dispose()
-  Set-Acl -LiteralPath $path -AclObject $acl
-}
-[IO.File]::WriteAllBytes($backupPath,$originalBytes)
-[IO.File]::WriteAllText($candidatePath,$candidate + "`n",$utf8)
-[IO.File]::Replace($candidatePath,$configPath,[System.Management.Automation.Language.NullString]::Value)
-@{applied=$true;appId=$definition.id;backup=$backupPath;reloadRequired=$true} | ConvertTo-Json -Compress
+@{applied=$false;preview=$previewPath;appId=$definition.id;publicationRequired=$true} | ConvertTo-Json -Compress

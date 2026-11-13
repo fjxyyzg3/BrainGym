@@ -30,6 +30,7 @@ export async function processFixture(
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,
+        BRAINGYM_ENV: "test",
         WHEELMAKER_APP_MANAGED: managed ? "1" : "0",
         WHEELMAKER_STATE_DIR: join(directory, "hub"),
         WHEELMAKER_SERVICE_ID: "braingym",

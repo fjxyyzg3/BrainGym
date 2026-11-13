@@ -8,6 +8,9 @@ import { homedir } from "node:os";
 import { requirePublicOrigin } from "./wheelmaker-origin.mjs";
 
 const origin = requirePublicOrigin(process.env.APP_ORIGIN);
+throw new Error(
+  "Legacy public preflight is retired; use npm run rehearse and explicit release deploy",
+);
 const publicUrl = `${origin}/braingym/`;
 const fixture = JSON.parse(
   readFileSync(resolve("data/wheelmaker-verification/private.json"), "utf8"),

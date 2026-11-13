@@ -7,6 +7,9 @@ import { requirePublicOrigin } from "./wheelmaker-origin.mjs";
 
 const origin = requirePublicOrigin(process.env.APP_ORIGIN),
   basePath = "/braingym/";
+throw new Error(
+  "Legacy public verification is retired; use isolated verification and read-only release checks",
+);
 const privatePath = resolve("data/wheelmaker-verification/private.json");
 const fixture = JSON.parse(readFileSync(privatePath, "utf8"));
 const formalRestart = fixture.stage === "formal-restart";

@@ -14,7 +14,10 @@ test("real CLI creates, lists, revokes, issues and rotates without changing iden
     const run = spawnSync(
       process.execPath,
       ["--import", "tsx", "src/server/cli.ts", ...args],
-      { encoding: "utf8", env: { ...process.env, DATABASE_PATH: path } },
+      {
+        encoding: "utf8",
+        env: { ...process.env, BRAINGYM_ENV: "test", DATABASE_PATH: path },
+      },
     );
     assert.equal(run.status, 0, run.stderr);
     return JSON.parse(run.stdout);

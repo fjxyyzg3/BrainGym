@@ -55,6 +55,17 @@
 
 首次沙箱运行因 Windows 目录保护权限返回 `FILESYSTEM_PROTECTION`；取得所需权限后重试成功，未削弱保护或修改正式服务。只读调用 `readEvidence` 核验封存及运行时文件摘要，8 项检查完整，候选源码 fingerprint 与任务提交一致。
 
-候选保留在稳定工作区忽略的 `.runtime/releases/candidates/8540adb3c10f-7db199fe-6931-402c-ae5c-51567b6ad338/`；截图保留于 `.runtime/verification/spatial-color-n-back/`，不进入提交或候选镜像。分支推送、合并和清理尚待本次 Git finalize 执行后记录。
+候选保留在稳定工作区忽略的 `.runtime/releases/candidates/8540adb3c10f-7db199fe-6931-402c-ae5c-51567b6ad338/`；截图保留于 `.runtime/verification/spatial-color-n-back/`，不进入提交或候选镜像。
+
+代码阶段已完成 Git finalize：任务分支先推送并核验 SHA，随后快进合入干净的 `main`，推送并核验远端 `main` 为 `1295cc6`。已删除干净的任务 worktree、本地及远端 `feat/spatial-color-n-back`，未创建 PR。稳定主工作区为 `D:\GithubRepos\BrainGym`；收尾文档阶段在此重新建立 Git 上下文，不依赖已清理 worktree。
+
+合并后只读调用 `assertPublishable`，确认稳定 `main` 的源码 fingerprint 与候选一致、封存及文件摘要有效，8 项检查完整；该调用不执行 deploy。文档收尾不改变候选对应的可执行源码，应用验证证据继续有效。
+
+| 提交      | 内容                                                     |
+| --------- | -------------------------------------------------------- |
+| `ff95670` | `docs: approve spatial color n-back specification`       |
+| `4a9772b` | `docs: plan spatial color n-back implementation`         |
+| `8540adb` | `feat: add position and color n-back training`           |
+| `1295cc6` | `docs: record successful spatial color n-back rehearsal` |
 
 来源：[实施计划](../plans/2026-11-13-spatial-color-n-back/plan-spatial-color-n-back.md)、[新增 Node 测试](../../tests/color-n-back.test.ts)、[双路浏览器测试](../../tests/e2e/color-n-back.spec.ts)、[PWA 浏览器测试](../../tests/e2e/pwa.spec.ts)、[原生后台脚本](../../scripts/check-native-visibility.mjs)。

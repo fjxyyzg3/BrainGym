@@ -65,15 +65,17 @@ assert.equal(
 - [x] 使用 wiki 技能同步已实现规则、合同、导航及身份边界；README 增加新模式说明。验收记录包含 RED/GREEN、最终命令、截图结论、未做真机项及 Findings/Verification/Residual Risk。
 - [x] 运行 `npm run rehearse` 生成独立候选，按现有隔离演练入口验证候选；不执行正式 deploy 或 Hub 控制，不读取/输出正式凭据。
 - [x] 检查 status/stat/实际 diff、.gitignore/.dockerignore 与本任务敏感信息扫描，核实不引入依赖或数据库迁移；格式检查只覆盖本次文件。
-- [ ] git-workflow checkpoint 提交通过完整门槛的实现；finalize 刷新并同步远端、push 和核验 SHA，按偏好合入 main 并清理已合并且干净的任务分支/worktree，不包含任务外改动。阶段完成后从稳定 main 记录交付状态，正式发布仍按 spec 授权范围单列。
+- [x] git-workflow checkpoint 提交通过完整门槛的实现；finalize 刷新并同步远端、push 和核验 SHA，按偏好合入 main 并清理已合并且干净的任务分支/worktree，不包含任务外改动。阶段完成后从稳定 main 记录交付状态，正式发布仍按 spec 授权范围单列。
 
 ## 执行证据
 
 - 2026-11-13：服务端 RED 为新模式保存 400≠200、未知 game 查询 200≠400；浏览器 RED 为新模式大厅卡片不存在。
 - Task 1 GREEN：27 个聚焦 Node 测试通过（含新增 10 个双路测试），原空间合同与输入测试保持通过。
 - Task 2 GREEN：9 个新模式浏览器用例通过；原生 CDP 分别验证两种模式的后台作废。桌面结果、记录与 390px 双按钮截图已检查，无溢出；实际手机与锁屏未验证。
-- 完整门槛进度：typecheck、build、npm test 已通过，Node 全套 86/86；最终同构建根路径和前缀各 26/26 通过。阶段代码 checkpoint 依既定策略等待完整门槛。
+- 完整门槛：typecheck、build、npm test 已通过，Node 全套 86/86；最终同构建根路径和前缀各 26/26 通过。上述门槛在实现 checkpoint 前完成，后续仅更新验收及收尾文档。
 
 - 文档已完成专用代理优化与独立只读复核；最后一次完整门槛包括六色色板命名分组语义，全部通过。
 
 - 实现 checkpoint：8540adb；隔离 rehearse 从该提交重建，8 项检查与真实隔离 Hub 的备份失败恢复、回退、数据保留和 Reload 保护均通过，封存/源码一致性核验通过。正式 deploy 未授权且未执行。
+
+- Git finalize：任务分支及 main 推送的实际远端 SHA 均核验为 1295cc6；任务 worktree、本地和远端任务分支已清理，无 PR。收尾文档从稳定 main 新建 Git 上下文；main 与候选只读一致性校验通过，正式发布仍未执行。

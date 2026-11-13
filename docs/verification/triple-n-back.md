@@ -2,7 +2,7 @@
 
 日期：2026-11-14。依据：[已批准 spec](../scope/2026-11-13-triple-n-back.md)、[实施计划](../plans/2026-11-13-triple-n-back/plan-triple-n-back.md)。
 
-当前状态：仓库实现与双路径验证完成，正式发布尚未执行；整体交付仍待发布验收。
+当前状态：仓库实现、双路径验证及候选演练完成，正式发布尚未执行；整体交付仍待发布验收。
 
 ## 验证环境与命令
 
@@ -49,14 +49,20 @@ Node.js `v26.12.0`、npm `11.20.0`，本机 Chrome，由 Playwright 启动。未
 
 **Findings**：本次差异未发现阻塞问题。扩展仅增加受支持模式及数字统计，未改变认证、数据库 schema、来源校验或代理信任机制。
 
-**Verification**：结合 `git status --short`、`git diff --stat`、实际 diff 和新增文件检查：服务端仍从有效会话派生归属，原 SQL 均使用参数绑定；三路统计逐路校验并服务端复算，规范化保持旧合同顺序，幂等冲突不能被数字一路绕过。既有 Cookie、Origin、登录限流、PWA 私人响应不缓存和打包排除配置保持；94 项 Node 与两路径各 37 项 e2e 提供授权、输入与保存证据。文档路径、链接、命令及敏感信息另做提交前扫描。
+**Verification**：结合 `git status --short`、`git diff --stat`、实际 diff 和新增文件检查：服务端仍从有效会话派生归属，原 SQL 均使用参数绑定；三路统计逐路校验并服务端复算，规范化保持旧合同顺序，幂等冲突不能被数字一路绕过。既有 Cookie、Origin、登录限流、PWA 私人响应不缓存和打包排除配置保持；94 项 Node 与两路径各 37 项 e2e 提供授权、输入与保存证据。文档路径、链接、命令及变更文件敏感信息扫描通过。
 
 **Residual Risk**：未实测实体 Android/iOS、Safari、锁屏或已安装 PWA 的新模式；Chromium 模拟、三点触屏与真实 hidden 事件不替代这些平台证据。浏览器仍负责出题与统计，服务端不证明真实游玩过程。未新增安全敏感依赖；本轮未调整真实代理策略。
 
 文档按 wiki／write-doc 同步，由当前 agent 起草、优化和复核；受协作工具调用限制，未取得独立子代理复核结果。
 
+## 候选演练
+
+产品提交为 `12dc206`。`npm run rehearse` 从该提交导出源码，重新完成 typecheck、build、94 项 Node 测试、两路径各 37 项浏览器测试、真实 Vite 代理与登录／保存流程、生产依赖准备和真实隔离 Hub 检查。隔离结果为 `passed: true`，备份失败恢复、验证失败回退、数据保留及全局 Reload 拒绝均得到实际验证。
+
+候选为 `12dc20652b40-c70733df-ef21-4687-982f-9a5c5c82bbf4`，位于稳定主仓库的未跟踪 `.runtime/releases/candidates/`；无需依赖任务 worktree，也不会因其清理而丢失。
+
 ## 正式发布
 
-尚未执行。候选演练、Git main 交付、正式部署和实际在线验收结果在完成后补记。
+尚未执行。Git main 交付、正式部署和实际在线验收结果在完成后补记。
 
 来源：[共享合同](../../src/shared/contracts.ts)、[共享规则](../../src/shared/rules.ts)、[引擎](../../src/client/game.ts)、[服务端解析](../../src/server/store.ts)、[客户端](../../src/client/App.tsx)、[三路 Node 测试](../../tests/triple-n-back.test.ts)、[三路浏览器测试](../../tests/e2e/triple-n-back.spec.ts)、[PWA 测试](../../tests/e2e/pwa.spec.ts)、[原生后台脚本](../../scripts/check-native-visibility.mjs)。

@@ -60,8 +60,8 @@
 
 **Files:** 本任务全部经过审查的产品、测试和文档文件；不暂存任务外文件。
 
-- [ ] 全部门槛通过后 checkpoint 完整产品工作单元，记录 commit。
-- [ ] 在已提交源码上运行 `npm run rehearse`，记录输出候选目录和各隔离检查结果；候选由现有工具保留在稳定主仓库，不依赖任务 worktree。
+- [x] 全部门槛通过后 checkpoint 完整产品工作单元，记录 commit。
+- [x] 在已提交源码上运行 `npm run rehearse`，记录输出候选目录和各隔离检查结果；候选由现有工具保留在稳定主仓库，不依赖任务 worktree。
 - [ ] git-workflow finalize 代码阶段：刷新远端、rebase、push 并核对 SHA；main 干净时合入并 push，核对 main SHA，清理已合并的任务分支与 worktree。若运行源码因同步改变，候选失效则从 main 重新演练。
 
 ## Task 5：正式发布与收尾
@@ -81,3 +81,6 @@
 
 - 2026-11-14：修正实际六色黑／白字对比度、原空间按钮高度导致的滚动回归及合跑登录额度隔离；不削弱断言或生产限流。最终 typecheck/build 通过，Node 94/94、根路径 e2e 37/37、同一构建前缀 e2e 37/37。已查看最终准备／留空／数字／记录及 320/390px 结果截图。
 - wiki/write-doc：沿用已匹配的规则页与架构页，按当前代码同步；当前 agent 完成起草、优化及复核，协作接口限制导致无独立子代理复核，未把此项伪记为独立审查。
+
+- 产品 checkpoint：`12dc206 feat: add position color number n-back mode`。
+- 候选演练：`npm run rehearse` 通过全部 8 项检查，真实隔离 Hub 证明备份失败恢复、发布失败回退、数据保留及全局 Reload 保护；候选 `12dc20652b40-c70733df-ef21-4687-982f-9a5c5c82bbf4`，存于稳定主仓库 `.runtime/releases/candidates/`。

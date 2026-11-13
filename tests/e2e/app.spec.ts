@@ -266,7 +266,11 @@ test("invalid session preserves completed result and original login can retry", 
   await page.getByRole("button", { name: "重试保存" }).click();
   await expect(page.locator(".save-message")).toContainText("已保存到");
 });
-for (const visibilityGame of ["spatial-n-back", "spatial-color-n-back"])
+for (const visibilityGame of [
+  "spatial-n-back",
+  "spatial-color-n-back",
+  "spatial-color-number-n-back",
+])
   test(`native browser background event aborts an authenticated ${visibilityGame} game without saving`, async ({
     baseURL,
   }) => {

@@ -35,6 +35,24 @@
   font-size: 1rem;
   gap: 8px;
   justify-content: space-between;
+  height: auto;
+  min-block-size: 68px;
+}
+.match-actions.triple-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+}
+.match-feedback {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+@container training (max-width: 30rem) {
+  .match-actions.triple-actions {
+    grid-template-columns: 1fr;
+    width: min(320px, 100%);
+    gap: 8px;
+  }
 }
 .color-palette {
   display: flex;
@@ -53,6 +71,9 @@
   width: 18px;
   height: 18px;
   border-radius: 4px;
+  font-style: normal;
+  text-align: center;
+  font-weight: 700;
 }
 .channel-result {
   text-align: left;
@@ -657,6 +678,9 @@ p {
   color: var(--error);
   margin: 13px 0;
 }
+.triple-play {
+  container: training / inline-size;
+}
 .play-page {
   max-width: 520px;
   margin: 0 auto;
@@ -702,6 +726,16 @@ p {
   background: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 3px 15px #0057d925;
+}
+.cell:has(.stimulus-number) {
+  display: grid;
+  place-items: center;
+}
+.stimulus-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 .match-button {
   width: 230px;

@@ -72,7 +72,7 @@ try {
       socket.send(JSON.stringify({ id, method, params, sessionId }));
     });
   const { targetId } = await send("Target.createTarget", {
-    url: `${new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000").origin}${basePath}#${process.env.VISIBILITY_GAME === "spatial-color-n-back" ? "color-n-back" : "n-back"}`,
+    url: `${new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000").origin}${basePath}#${process.env.VISIBILITY_GAME === "spatial-color-number-n-back" ? "triple-n-back" : process.env.VISIBILITY_GAME === "spatial-color-n-back" ? "color-n-back" : "n-back"}`,
   });
   const { sessionId } = await send("Target.attachToTarget", {
     targetId,

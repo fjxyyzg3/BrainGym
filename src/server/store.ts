@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import {
   GAME,
+  TRIPLE_GAME,
   isGameId,
   VERSION,
   type User,
@@ -44,6 +45,7 @@ export function parseResult(value: unknown): ResultInput {
     else {
       validateCounts(p.position);
       validateCounts(p.color);
+      if (p.game === TRIPLE_GAME) validateCounts(p.number);
     }
   } catch {
     throw new AppError(400, "INVALID_RESULT", "难度或统计无效");
@@ -76,6 +78,16 @@ export function parseResult(value: unknown): ResultInput {
             fp: p.color.fp,
             tn: p.color.tn,
           },
+          ...(p.game === TRIPLE_GAME
+            ? {
+                number: {
+                  tp: p.number.tp,
+                  fn: p.number.fn,
+                  fp: p.number.fp,
+                  tn: p.number.tn,
+                },
+              }
+            : {}),
         }),
     completedAt: p.completedAt,
   } as ResultInput;

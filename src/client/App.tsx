@@ -11,6 +11,8 @@ import { NBackGame, type GameSnapshot, type Dimension } from "./game";
 import {
   generateSequence,
   generateColorSequence,
+  generateTripleSequence,
+  resultChannels,
   score,
   scoreResult,
   STEP_MS,
@@ -19,6 +21,10 @@ import {
 import {
   GAME,
   COLOR_GAME,
+  TRIPLE_GAME,
+  GAME_IDS,
+  GAME_DIMENSIONS,
+  DIMENSION_NAMES,
   GAME_NAMES,
   VERSION,
   type Counts,
@@ -29,30 +35,48 @@ import {
   type GameId,
   type GameCounts,
   type DualCounts,
+  type TripleCounts,
 } from "../shared/contracts";
 
-type Page = "home" | "n-back" | "color-n-back" | "records";
+type Page = "home" | "n-back" | "color-n-back" | "triple-n-back" | "records";
 const applicationTitle = document.title;
 const currentPage = (): Page =>
   location.hash === "#n-back"
     ? "n-back"
     : location.hash === "#color-n-back"
       ? "color-n-back"
-      : location.hash === "#records"
-        ? "records"
-        : "home";
+      : location.hash === "#triple-n-back"
+        ? "triple-n-back"
+        : location.hash === "#records"
+          ? "records"
+          : "home";
 const go = (page: Page) => {
   location.hash = page;
 };
 const trainingPage = (game: GameId): Page =>
-  game === GAME ? "n-back" : "color-n-back";
+  game === GAME
+    ? "n-back"
+    : game === COLOR_GAME
+      ? "color-n-back"
+      : "triple-n-back";
+const pageGame = (page: Page): GameId =>
+  page === "triple-n-back"
+    ? TRIPLE_GAME
+    : page === "color-n-back"
+      ? COLOR_GAME
+      : GAME;
+const SHORTCUTS: Record<Dimension, string> = {
+  position: "F",
+  color: "J",
+  number: "K",
+};
 const COLORS = [
-  { name: "蓝", value: "#0057d9" },
-  { name: "橙", value: "#d44d26" },
-  { name: "紫", value: "#7b42b6" },
-  { name: "绿", value: "#00806a" },
-  { name: "玫红", value: "#aa2855" },
-  { name: "金", value: "#9c7000" },
+  { name: "蓝", value: "#0057d9", ink: "#ffffff" },
+  { name: "橙", value: "#d44d26", ink: "#000000" },
+  { name: "紫", value: "#7b42b6", ink: "#ffffff" },
+  { name: "绿", value: "#00806a", ink: "#ffffff" },
+  { name: "玫红", value: "#aa2855", ink: "#ffffff" },
+  { name: "金", value: "#9c7000", ink: "#000000" },
 ];
 const formatScore = (x: number) => x.toFixed(1);
 const formatTime = (x: string) =>
@@ -252,7 +276,7 @@ export function App() {
     document.title =
       page === "home"
         ? applicationTitle
-        : `${page === "records" ? "个人记录" : GAME_NAMES[page === "color-n-back" ? COLOR_GAME : GAME]} | ${applicationTitle}`;
+        : `${page === "records" ? "个人记录" : GAME_NAMES[pageGame(page)]} | ${applicationTitle}`;
   }, [page]);
   useEffect(() => {
     void refresh();
@@ -415,7 +439,7 @@ export function App() {
         ) : (
           <Training
             key={page}
-            gameId={page === "color-n-back" ? COLOR_GAME : GAME}
+            gameId={pageGame(page)}
             onRecords={openRecords}
             user={user}
             offline={offline}
@@ -440,7 +464,7 @@ function Home() {
         <p>选一个游戏，开始练习。</p>
       </div>
       <section className="games-grid" aria-label="游戏列表">
-        {([GAME, COLOR_GAME] as const).map((gameId) => (
+        {GAME_IDS.map((gameId) => (
           <article
             key={gameId}
             className="game-card"
@@ -453,7 +477,9 @@ function Home() {
             <p className="game-description">
               {gameId === GAME
                 ? "记住位置，判断是否与 N 步前相同。"
-                : "同时记住位置和颜色，分别判断是否与 N 步前相同。"}
+                : gameId === TRIPLE_GAME
+                  ? "同时记住位置、颜色和数字，分别判断是否与 N 步前相同。"
+                  : "同时记住位置和颜色，分别判断是否与 N 步前相同。"}
             </p>
             <div className="game-meta">
               <span>
@@ -530,7 +556,11 @@ function Training({
   onSaved: () => void;
   onAbortNotice: () => void;
 }) {
-  const dual = gameId === COLOR_GAME;
+  const multi = gameId !== GAME;
+  const triple = gameId === TRIPLE_GAME;
+  const dimensions: readonly Dimension[] = GAME_DIMENSIONS[gameId];
+  const subjects = triple ? "位置、颜色和数字" : "位置和颜色";
+  const roundsLabel = triple ? "轮三路" : multi ? "轮双路" : "次有效";
   const [n, setN] = useState(2),
     [mode, setMode] = useState<"idle" | "running" | "result" | "aborted">(
       "idle",
@@ -621,12 +651,10 @@ function Training({
           e.target.closest("input, textarea, select, [contenteditable=true]"))
       )
         return;
-      const dimension = dual
-        ? e.code === "KeyF"
-          ? "position"
-          : e.code === "KeyJ"
-            ? "color"
-            : null
+      const dimension = multi
+        ? (dimensions.find(
+            (dimension) => e.code === `Key${SHORTCUTS[dimension]}`,
+          ) ?? null)
         : e.code === "Space"
           ? "position"
           : null;
@@ -637,7 +665,7 @@ function Training({
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [mode, respond, dual]);
+  }, [mode, respond, multi, dimensions]);
   const start = async (asGuest = false) => {
     setStarting(true);
     setError("");
@@ -660,7 +688,11 @@ function Training({
       resultId.current = crypto.randomUUID();
       game.current = new NBackGame<GameId>(
         n,
-        dual ? generateColorSequence(n) : generateSequence(n),
+        triple
+          ? generateTripleSequence(n)
+          : multi
+            ? generateColorSequence(n)
+            : generateSequence(n),
         performance.now(),
         gameId,
       );
@@ -682,7 +714,9 @@ function Training({
           const summary: GameCounts =
             gameId === GAME
               ? { game: GAME, ...(counts as Counts) }
-              : { game: COLOR_GAME, ...(counts as DualCounts) };
+              : gameId === COLOR_GAME
+                ? { game: COLOR_GAME, ...(counts as DualCounts) }
+                : { game: TRIPLE_GAME, ...(counts as TripleCounts) };
           const completedAt = new Date().toISOString();
           const result: Outcome = {
             summary,
@@ -729,46 +763,35 @@ function Training({
           <h1>练习完成，做得不错。</h1>
           <p>
             {GAME_NAMES[outcome.summary.game]} · {outcome.n}-back · 30{" "}
-            {dual ? "轮双路" : "次有效"}判断
+            {roundsLabel}判断
           </p>
         </div>
         <div className="result-card">
-          <div className="score-caption">{dual ? "综合分" : "平衡准确率"}</div>
+          <div className="score-caption">{multi ? "综合分" : "平衡准确率"}</div>
           <div className="big-score" data-testid="score">
             {formatScore(outcome.localScore)}
             <small>/ 100</small>
           </div>
           <p className="muted">
-            {dual
-              ? "位置与颜色的平衡准确率各占一半"
+            {multi
+              ? triple
+                ? "位置、颜色与数字的平衡准确率各占三分之一"
+                : "位置与颜色的平衡准确率各占一半"
               : "匹配命中率与不匹配正确拒绝率各占一半"}
           </p>
           {outcome.summary.game === GAME ? (
             <CountSummary counts={outcome.summary} />
           ) : (
-            (["position", "color"] as const).map((dimension) => (
+            resultChannels(outcome.summary).map(({ dimension, counts }) => (
               <section className="channel-result" key={dimension}>
                 <h2>
-                  {dimension === "position" ? "位置" : "颜色"}判断{" "}
+                  {DIMENSION_NAMES[dimension]}判断{" "}
                   <strong data-testid={`${dimension}-score`}>
-                    {formatScore(
-                      score(
-                        outcome.summary.game === COLOR_GAME
-                          ? outcome.summary[dimension]
-                          : outcome.summary,
-                      ),
-                    )}
+                    {formatScore(score(counts))}
                     <small> 分</small>
                   </strong>
                 </h2>
-                <CountSummary
-                  counts={
-                    outcome.summary.game === COLOR_GAME
-                      ? outcome.summary[dimension]
-                      : outcome.summary
-                  }
-                  dimension={dimension}
-                />
+                <CountSummary counts={counts} dimension={dimension} />
               </section>
             ))
           )}
@@ -833,10 +856,10 @@ function Training({
     );
   if (mode === "running" && snapshot)
     return (
-      <section className="play-page">
+      <section className={`play-page${triple ? " triple-play" : ""}`}>
         <div className="play-top">
           <span className="tag">
-            {dual ? "位置＋颜色" : "空间"} {n}-back
+            {GAME_NAMES[gameId].replace(" N-back", "")} {n}-back
           </span>
           <button className="text-button" onClick={abort}>
             结束本局
@@ -846,8 +869,8 @@ function Training({
         <div className="play-title">
           <span className="eyebrow">
             {snapshot.phase === "warmup"
-              ? dual
-                ? "先记住起始位置和颜色"
+              ? multi
+                ? `先记住起始${subjects}`
                 : "先记住起始位置"
               : "保持专注，跟随节奏"}
           </span>
@@ -857,8 +880,8 @@ function Training({
               : `判断 ${snapshot.trial} / 30`}
           </h1>
           <p>
-            {dual
-              ? `分别比较 ${n} 步前的位置和颜色`
+            {multi
+              ? `分别比较 ${n} 步前的${subjects}`
               : `当前位置与 ${n} 步前相同，就按下匹配`}
           </p>
         </div>
@@ -866,9 +889,9 @@ function Training({
           className="board"
           role="img"
           aria-label={
-            dual
+            multi
               ? snapshot.lit && snapshot.color !== null
-                ? `九宫格第 ${snapshot.cell! + 1} 格，${COLORS[snapshot.color].name}色`
+                ? `九宫格第 ${snapshot.cell! + 1} 格，${COLORS[snapshot.color].name}色${triple ? `，数字 ${snapshot.number}` : ""}`
                 : "九宫格留空"
               : "九宫格位置展示"
           }
@@ -879,34 +902,42 @@ function Training({
               data-testid={`cell-${i}`}
               className={`cell ${snapshot.lit && snapshot.cell === i ? "lit" : ""}`}
               style={
-                dual &&
+                multi &&
                 snapshot.lit &&
                 snapshot.cell === i &&
                 snapshot.color !== null
-                  ? { backgroundColor: COLORS[snapshot.color].value }
+                  ? {
+                      backgroundColor: COLORS[snapshot.color].value,
+                      color: COLORS[snapshot.color].ink,
+                    }
                   : undefined
               }
-            />
+            >
+              {triple && snapshot.lit && snapshot.cell === i ? (
+                <span className="stimulus-number">{snapshot.number}</span>
+              ) : null}
+            </div>
           ))}
         </div>
-        <div className={dual ? "match-actions" : undefined}>
-          {(dual
-            ? (["position", "color"] as const)
-            : (["position"] as const)
-          ).map((dimension) => {
+        <div
+          className={
+            multi
+              ? `match-actions${triple ? " triple-actions" : ""}`
+              : undefined
+          }
+        >
+          {dimensions.map((dimension) => {
             const answered =
               dimension === "position"
                 ? snapshot.answered
-                : snapshot.colorAnswered;
-            const label = dual
-              ? dimension === "position"
-                ? "位置匹配"
-                : "颜色匹配"
-              : "匹配";
+                : dimension === "color"
+                  ? snapshot.colorAnswered
+                  : snapshot.numberAnswered;
+            const label = multi ? `${DIMENSION_NAMES[dimension]}匹配` : "匹配";
             return (
               <button
                 key={dimension}
-                aria-label={dual ? label : answered ? "已标记匹配" : label}
+                aria-label={multi ? label : answered ? "已标记匹配" : label}
                 aria-pressed={answered}
                 className={`primary match-button ${answered ? "marked" : ""}`}
                 disabled={snapshot.phase !== "playing" || answered}
@@ -921,15 +952,22 @@ function Training({
                 {answered ? (
                   <>
                     <Icon name="check" />
-                    {dual
-                      ? `${dimension === "position" ? "位置" : "颜色"}已标记`
-                      : "已标记匹配"}
+                    {multi ? (
+                      <span>
+                        {label}
+                        <small className="match-feedback" aria-hidden="true">
+                          已标记
+                        </small>
+                      </span>
+                    ) : (
+                      "已标记匹配"
+                    )}
                   </>
                 ) : (
                   label
                 )}
                 <kbd aria-hidden="true">
-                  {dual ? (dimension === "position" ? "F" : "J") : "空格"}
+                  {multi ? SHORTCUTS[dimension] : "空格"}
                 </kbd>
               </button>
             );
@@ -955,8 +993,8 @@ function Training({
         <span className="eyebrow">WORKING MEMORY</span>
         <h1>{GAME_NAMES[gameId]}</h1>
         <p>
-          {dual
-            ? "同时记住位置和颜色，分别判断。"
+          {multi
+            ? `同时记住${subjects}，分别判断。`
             : "观察当下的位置，回想 N 步之前。"}
         </p>
       </div>
@@ -970,8 +1008,8 @@ function Training({
           <div className="instruction-visual">
             <MiniGrid />
             <span>
-              {dual
-                ? "位置和颜色，分别与 N 步前比较"
+              {multi
+                ? `${subjects}，分别与 N 步前比较`
                 : "现在的位置 = N 步前的位置？"}
             </span>
           </div>
@@ -979,13 +1017,16 @@ function Training({
           <ol>
             <li>
               九宫格中的一个位置会短暂亮起，
-              {dual ? "同时记住位置和颜色。" : "记住它。"}
+              {multi
+                ? `同时记住${subjects}。${triple ? "数字为 1～9，与格子编号无关。" : ""}`
+                : "记住它。"}
             </li>
             <li>
-              {dual ? (
+              {multi ? (
                 <>
                   位置与 <strong>N 步之前</strong>相同，点击“位置匹配”或按
                   F；颜色相同，点击“颜色匹配”或按 J。
+                  {triple && "数字相同，点击“数字匹配”或按 K。"}
                 </>
               ) : (
                 <>
@@ -994,8 +1035,8 @@ function Training({
               )}
             </li>
             <li>
-              {dual
-                ? "两者都相同就都按。不相同的维度不操作，每步每路只接受一次输入。"
+              {multi
+                ? "哪项相同就按哪项，多项相同就都按。不相同的维度不操作，每步每路只接受一次输入。"
                 : "不相同则不操作。每一步仅接受一次输入。"}
             </li>
           </ol>
@@ -1005,15 +1046,15 @@ function Training({
               每步 2.5 秒
             </span>
             <span>亮起 0.5 秒</span>
-            <span>{dual ? "30 轮双路判断" : "30 次有效判断"}</span>
+            <span>30 {roundsLabel}判断</span>
           </div>
           <p className="fine">
             先展示 N 次作为记忆起点，不计分。
-            {dual
-              ? "两路各算平衡准确率，平均为综合分。"
+            {multi
+              ? `${triple ? "三" : "两"}路各算平衡准确率，平均为综合分。`
               : "结果以平衡准确率评定。"}
           </p>
-          {dual && (
+          {multi && (
             <div
               className="color-palette"
               role="group"
@@ -1022,9 +1063,11 @@ function Training({
               {COLORS.map((color) => (
                 <span key={color.name}>
                   <i
-                    style={{ backgroundColor: color.value }}
+                    style={{ backgroundColor: color.value, color: color.ink }}
                     aria-hidden="true"
-                  />
+                  >
+                    {triple ? "5" : null}
+                  </i>
                   {color.name}
                 </span>
               ))}
@@ -1048,7 +1091,7 @@ function Training({
             ))}
           </div>
           <p className="level-description">
-            回想 <strong>{n} 步</strong>前的位置{dual ? "和颜色" : ""} · 约{" "}
+            回想 <strong>{n} 步</strong>前的{multi ? subjects : "位置"} · 约{" "}
             {Math.ceil(((n + TRIALS) * STEP_MS) / 1000)} 秒
           </p>
           <div className="identity-note">
@@ -1199,7 +1242,7 @@ function Records({
       ) : (
         <>
           <div className="mode-options" role="group" aria-label="记录模式">
-            {([GAME, COLOR_GAME] as const).map((id) => (
+            {GAME_IDS.map((id) => (
               <button
                 key={id}
                 className={id === gameId ? "selected" : ""}
@@ -1293,27 +1336,31 @@ function Records({
                         <td className="table-score">
                           {formatScore(x.score)}
                           <small> 分</small>
-                          {x.game === COLOR_GAME && (
+                          {x.game !== GAME && (
                             <div className="channel-scores">
-                              位置 {formatScore(score(x.position))} · 颜色{" "}
-                              {formatScore(score(x.color))}
+                              {resultChannels(x)
+                                .map(
+                                  ({ dimension, counts }) =>
+                                    `${DIMENSION_NAMES[dimension]} ${formatScore(score(counts))}`,
+                                )
+                                .join(" · ")}
                             </div>
                           )}
                         </td>
                         {(["tp", "fn", "fp", "tn"] as const).map((key) => (
                           <td key={key}>
-                            {x.game === GAME ? (
-                              x[key]
-                            ) : (
-                              <>
-                                <div className="channel-stat">
-                                  位置 {x.position[key]}
-                                </div>
-                                <div className="channel-stat">
-                                  颜色 {x.color[key]}
-                                </div>
-                              </>
-                            )}
+                            {x.game === GAME
+                              ? x[key]
+                              : resultChannels(x).map(
+                                  ({ dimension, counts }) => (
+                                    <div
+                                      className="channel-stat"
+                                      key={dimension}
+                                    >
+                                      {DIMENSION_NAMES[dimension]} {counts[key]}
+                                    </div>
+                                  ),
+                                )}
                           </td>
                         ))}
                       </tr>

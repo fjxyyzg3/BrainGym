@@ -8,30 +8,36 @@ import { normalizeBasePath } from "../../src/shared/paths.js";
 import { releaseServer } from "./pwa-server";
 
 const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);
-test("PWA dual mode offline guest uses cached shell and never uploads after reconnect", async ({
-  page,
-  context,
-}) => {
-  await prime(page);
-  await page.close();
-  await context.setOffline(true);
-  const offline = await context.newPage();
-  let uploads = 0;
-  offline.on("request", (request) => {
-    if (request.url().endsWith("/api/results")) uploads++;
+for (const [route, title, channels] of [
+  ["color-n-back", "位置＋颜色 N-back", ["position", "color"]],
+  ["triple-n-back", "位置＋颜色＋数字 N-back", ["position", "color", "number"]],
+] as const)
+  test(`PWA ${route} offline guest uses cached shell and never uploads after reconnect`, async ({
+    page,
+    context,
+  }) => {
+    await prime(page);
+    await page.close();
+    await context.setOffline(true);
+    const offline = await context.newPage();
+    let uploads = 0;
+    offline.on("request", (request) => {
+      if (request.url().endsWith("/api/results")) uploads++;
+    });
+    await offline.goto(`${basePath}#${route}`);
+    await expect(
+      offline.getByRole("heading", { name: title, exact: true }),
+    ).toBeVisible();
+    await playOffline(offline);
+    for (const channel of channels)
+      await expect(offline.getByTestId(`${channel}-score`)).toHaveText(
+        "50.0 分",
+      );
+    await context.setOffline(false);
+    await offline.bringToFront();
+    expect(uploads).toBe(0);
+    expect(await offline.evaluate(() => localStorage.length)).toBe(0);
   });
-  await offline.goto(`${basePath}#color-n-back`);
-  await expect(
-    offline.getByRole("heading", { name: "位置＋颜色 N-back", exact: true }),
-  ).toBeVisible();
-  await playOffline(offline);
-  await expect(offline.getByTestId("position-score")).toHaveText("50.0 分");
-  await expect(offline.getByTestId("color-score")).toHaveText("50.0 分");
-  await context.setOffline(false);
-  await offline.bringToFront();
-  expect(uploads).toBe(0);
-  expect(await offline.evaluate(() => localStorage.length)).toBe(0);
-});
 async function prime(page: Page, url = basePath) {
   await page.goto(url);
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));

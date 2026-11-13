@@ -1,4 +1,10 @@
-import { GAME, type Counts, type GameCounts } from "./contracts.js";
+import {
+  GAME,
+  TRIPLE_GAME,
+  type Counts,
+  type Dimension,
+  type GameCounts,
+} from "./contracts.js";
 export const TRIALS = 30;
 export const STEP_MS = 2500;
 export const LIT_MS = 500;
@@ -19,6 +25,17 @@ export function generateColorSequence(
   const positions = generateChannel(n, 9, random);
   const colors = generateChannel(n, 6, random);
   return positions.map((cell, i) => ({ cell, color: colors[i] }));
+}
+export interface TripleStimulus extends ColorStimulus {
+  number: number;
+}
+export function generateTripleSequence(
+  n: number,
+  random = Math.random,
+): TripleStimulus[] {
+  const colors = generateColorSequence(n, random);
+  const numbers = generateChannel(n, 9, random);
+  return colors.map((stimulus, i) => ({ ...stimulus, number: numbers[i] + 1 }));
 }
 function generateChannel(
   n: number,
@@ -45,9 +62,23 @@ function generateChannel(
   }
 }
 export function scoreResult(result: GameCounts): number {
-  return result.game === GAME
-    ? score(result)
-    : (score(result.position) + score(result.color)) / 2;
+  const channels = resultChannels(result);
+  return (
+    channels.reduce((total, channel) => total + score(channel.counts), 0) /
+    channels.length
+  );
+}
+export function resultChannels(
+  result: GameCounts,
+): { dimension: Dimension; counts: Counts }[] {
+  if (result.game === GAME) return [{ dimension: "position", counts: result }];
+  const channels: { dimension: Dimension; counts: Counts }[] = [
+    { dimension: "position", counts: result.position },
+    { dimension: "color", counts: result.color },
+  ];
+  if (result.game === TRIPLE_GAME)
+    channels.push({ dimension: "number", counts: result.number });
+  return channels;
 }
 export function validateCounts(counts: Counts): void {
   const values = [counts.tp, counts.fn, counts.fp, counts.tn];

@@ -62,13 +62,13 @@
 
 - [x] 全部门槛通过后 checkpoint 完整产品工作单元，记录 commit。
 - [x] 在已提交源码上运行 `npm run rehearse`，记录输出候选目录和各隔离检查结果；候选由现有工具保留在稳定主仓库，不依赖任务 worktree。
-- [ ] git-workflow finalize 代码阶段：刷新远端、rebase、push 并核对 SHA；main 干净时合入并 push，核对 main SHA，清理已合并的任务分支与 worktree。若运行源码因同步改变，候选失效则从 main 重新演练。
+- [x] git-workflow finalize 代码阶段：刷新远端、rebase、push 并核对 SHA；main 干净时合入并 push，核对 main SHA，清理已合并的任务分支与 worktree。若运行源码因同步改变，候选失效则从 main 重新演练。
 
 ## Task 5：正式发布与收尾
 
 **Files:** 稳定 main 的验收文档与本计划；私有候选、备份、状态仅留在未跟踪 `.runtime/releases/`。
 
-- [ ] 从稳定 main 重新调用 git-workflow prepare，确认当前源码与候选证据一致；读取现有运维与发布脚本前置条件，不输出私有入口或认证。
+- [x] 从稳定 main 重新调用 git-workflow prepare，确认当前源码与候选证据一致；读取现有运维与发布脚本前置条件，不输出私有入口或认证。
 - [ ] 使用已验证 candidate 执行 `npm run release -- deploy --candidate $releaseCandidate`，然后 `npm run release -- status`；复用现有 Stop／备份／恢复机制，定义未变不 Reload，不写正式测试身份或成绩。
 - [ ] 核对现役程序、Monitor／Forwarding、真实 HTTPS 与前缀静态资源、新模式页面及既有数据库只读指纹；失败保留恢复现场，不把健康接口单独视为发布成功。
 - [ ] 记录实际发布证据与残余风险，完成计划；文档检查及安全扫描后 finalize 发布文档，自动 commit／push 并核对远端，不宣称未完成的必需验证已完成。
@@ -84,3 +84,7 @@
 
 - 产品 checkpoint：`12dc206 feat: add position color number n-back mode`。
 - 候选演练：`npm run rehearse` 通过全部 8 项检查，真实隔离 Hub 证明备份失败恢复、发布失败回退、数据保留及全局 Reload 保护；候选 `12dc20652b40-c70733df-ef21-4687-982f-9a5c5c82bbf4`，存于稳定主仓库 `.runtime/releases/candidates/`。
+
+- 代码阶段 finalize：任务分支及 main 实际远端 SHA 均核实为 `9783f2c446aa7f73904d8047f01ac92bfa5fa67b`；main 快进合入，无 PR，干净任务 worktree 和已合并的本地／远端任务分支均已清理。
+- 正式阶段从稳定 main 重新 prepare，候选封存及源码 fingerprint 有效，现役 healthy／Forwarding ready，定义不变。
+- 正式 deploy 被自动审批拒绝，命令未创建进程、未执行 Stop。拒绝理由是未见针对本次具体生产部署及短暂停服副作用的明确授权；不通过其他入口绕过。只读复查确认旧实例健康、转发 ready、配置未变、原数据保留，候选尚非现役程序。Task 5 的部署及在线验收保留未完成，等待用户明确授权。

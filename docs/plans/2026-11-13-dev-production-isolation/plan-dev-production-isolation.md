@@ -19,7 +19,7 @@
 - 已继承 prepare：`feat/dev-production-isolation`，工作区位于主仓库 `.worktree/feat/dev-production-isolation`，初始基线 `a09c049`。
 - 主工作区原有 `.agents/`、`.claude/`、`.skill-source-lock.json` 不属于本任务；另一项功能 worktree 保留。只暂存本任务文件。
 - 本次批准覆盖代码阶段提前合入 main；迁移未通过不能报告整体完成。稳定 main 中写入最终记录前重新 prepare，候选与私有记录不依赖任务 worktree。
-- 正式配置目前只含 BrainGym 一项应用，数据库为主仓库原 `data/braingym.sqlite`；只读脱敏核对已完成，尚未控制或更改正式实例。
+- 初始只读基线：正式配置只含 BrainGym 一项应用，数据库为主仓库原 `data/braingym.sqlite`；当时已完成只读脱敏核对，尚未控制或更改正式实例。
 
 ## Task 1：独立开发配置与入口
 
@@ -83,14 +83,15 @@
 **Files:** 稳定 main 上的本计划、验收文档及按实际结果需修正的 Wiki；`D:\Apps\BrainGym`、原数据库及私有 Hub 配置仅由已验证发布工具在授权范围操作。
 
 - [x] 切换到稳定 main 并建立该阶段 Git 上下文，确认已批准契约与私有候选/备份不依赖已清理 worktree。
-- [ ] 固定 main 候选、核验全部证据，读取正式配置与 Monitor 状态；任何基线、权限或冻结条件不足时在 Stop 前退出，不虚报迁移成功。
-- [ ] 显式发布到固定正式目录，保持原数据库、入口及标识；迁移前后仅对正式数据做只读指纹核验，验证真实 HTTPS 与单应用进程归属。
-- [ ] 在开发工作区再次构建，验证正式程序摘要、页面和资源未变；发布失败按持久状态恢复并报告。
-- [x] 更新已验证结果及认证阻塞记录，并在稳定 main 按 Git finalize 处理本批文档；代码阶段已清理本任务分支和 worktree，保留有效候选和其它任务文件。正式迁移与其后验收仍未完成。
+- [x] 固定 main 候选、核验全部证据，读取正式配置与 Monitor 状态；已配置既有 Registry 认证，真实单应用集合、运行环境及配置保护预检通过。
+- [x] 显式发布到固定正式目录，保持原数据库、入口及标识；迁移前后只读指纹、完整离线备份、真实 HTTPS 与直接 Node/Hub 进程归属均核验通过，发布状态 `published / verified`。
+- [x] 在稳定主工作区再次执行 `npm run build`；正式目录全部 2827 个文件的摘要、PID/instanceId、Monitor/Forwarding、真实页面和资源均保持不变。
+- [x] 更新最终验收记录及 Wiki，在稳定 main 按 Git finalize 处理本批文档；任务分支和 worktree 已清理，有效候选、最近恢复材料及其它任务文件保留。
 
 ## 实际执行状态
 
 - 代码 checkpoint `7116236`、构建环境修正 `70ed2b5`、候选证据 `b0f3339`；功能分支推送、main 合入/推送及实际远端 SHA 均已核对。
 - 有效候选来自 `70ed2b5`，全部 8 类检查通过；main 后续仅文档变化，运行源码指纹一致，稳定主工作区可继续使用。候选位置保存在私有 `.runtime/releases/latest-candidate.json`。
 - 任务 worktree 清理曾遇 Windows 长路径及不同执行上下文的私有 ACL，已在核对归属后清理，仅本任务目录受影响。另一项功能 worktree 保留。
-- 实际发布入口在 Stop 前返回 `AUTH_REQUIRED`，状态 `not-published / none`。原配置与数据路径未变，原回环、HTTPS 及浏览器只读检查通过；实际迁移仍等待现有 Registry 认证，整体未完成。
+- 首次发布曾在 Stop 前返回 `AUTH_REQUIRED`；用户配置既有 Registry 认证后，该阻塞已解除。随后从稳定 main 显式迁移成功，状态 `published / verified`，正式程序位于 `D:\Apps\BrainGym`，数据库原位保留。
+- 正式迁移、数据保留、真实 HTTPS、直接 Node/Hub 归属和再次开发构建的隔离复验均已通过，任务验收完成。既有依赖及响应头加固项继续记录在验收文档中，不声称已修复。

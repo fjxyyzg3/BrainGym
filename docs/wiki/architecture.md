@@ -26,7 +26,7 @@ BrainGym 使用 React 和 Vite 构建浏览器界面，Fastify 在生产环境�
 
 开发入口使用 `BRAINGYM_ENV=development`，API 回环 3002、Vite 5173，账户和成绩留在当前工作区 `.runtime/development/`。两端从同一开发配置读取端口和 Origin。开发库不能越过该目录或通过链接指向正式数据；测试显式指定隔离数据库。既有 Docker 的 production 标记和显式数据库仍兼容。
 
-正式程序的目标目录是仓库外 `D:\Apps\BrainGym`，正式数据库保持现有 Hub 定义所指的绝对位置。发布复制已演练的程序及生产依赖，不复制开发账户、私有环境文件或源码工作区。首次迁移前仍需保护原仓库 dist，实际迁移完成状态以[验收记录](../verification/dev-production-isolation.md)为准。
+WheelMaker 正式程序运行于仓库外 `D:\Apps\BrainGym`，正式数据库仍位于原 Hub 定义所指的绝对位置。发布复制已演练的程序及生产依赖，不复制开发账户、私有环境文件或源码工作区；仓库 dist 用于开发构建和预览。首次迁移及迁移后开发构建的隔离核验见[验收记录](../verification/dev-production-isolation.md)。
 
 代码交付阶段先完成隔离验证、提交、合入并推送 main，正式迁移随后从稳定 main 工作区显式执行。Git 合入不触发发布；迁移未通过不能认定整个任务完成。候选与验收证据绑定已提交的运行源码内容、锁文件、Node 环境和文件摘要；main 内容或产物变化时拒绝使用失效证据。
 

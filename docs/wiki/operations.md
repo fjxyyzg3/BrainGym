@@ -60,7 +60,7 @@ npm run cli:production -- token:rotate <user-id>
 
 ## 接入 WheelMaker
 
-安装 Node.js 24+，保留现有正式数据库。正式程序的目标目录为 `D:\Apps\BrainGym`，Hub 继续直接托管 Node 根进程，端口为回环 3001，路径为 `/braingym/`。正式 Origin、数据库绝对位置、应用和服务标识均从现有定义继承。服务本身通过本机 IPC 发布，不需要持有 Registry 控制认证；只有发布工具需要该认证。
+安装 Node.js 24+，保留现有正式数据库。正式程序位于 `D:\Apps\BrainGym`，Hub 直接托管 Node 根进程，端口为回环 3001，路径为 `/braingym/`。正式 Origin、数据库绝对位置、应用和服务标识均从原定义继承。服务本身通过本机 IPC 发布，不需要持有 Registry 控制认证；独立发布工具需要该认证。
 
 先在独立开发工作区完成代码和隔离验证，再按 Git 偏好提交、合入并推送 main。代码交付完成后，从稳定 main 工作区执行发布；整个任务要等实际迁移及在线验收完成才算完成。阶段间 main 内容变化时重新核对候选证据；清理任务 worktree 不能删除稳定主工作区 `.runtime/releases/` 内的候选、备份和阶段记录。
 

@@ -4,9 +4,11 @@
 
 ## 当前结论
 
-代码阶段已完成：实现、工作区验证、提交快照候选演练均通过，并已合入和推送 main。正式迁移尚未执行，整个任务未完成。现役 WheelMaker 仍使用原仓库程序；`D:\Apps\BrainGym` 是待迁移的正式目标目录。没有停止正式服务、替换正式程序或修改正式数据库。
+开发与正式环境分离已完成。WheelMaker 现役程序运行于仓库外 `D:\Apps\BrainGym`，发布状态为 `published / verified`。原 HTTPS Origin、`/braingym/`、3001 回环端口、应用和服务标识保持不变；数据库仍位于原绝对位置，只读指纹核验确认用户、凭据、有效会话与历史均已保留。
 
-稳定 main 已实际执行 `npm run release -- deploy --candidate <有效候选>`，来源及产物证据核验后返回 `AUTH_REQUIRED`，退出码 1；未发出 Stop，未建立维护日志。`npm run release -- status` 返回 `not-published / none`。继续迁移需要在主仓库未跟踪的 `.env.production.local` 中配置现有 `BRAINGYM_REGISTRY_TOKEN`，不通过聊天传递凭据；不使用其它用途的浏览器工具 Token 代替。
+代码已完成，工作区验证和 Git 快照候选演练均已通过；先合入并推送 main，再完成正式迁移及在线验收。迁移后在原仓库再次执行构建，正式进程 PID、instanceId、全部程序与生产依赖摘要均未改变，真实页面和资源仍通过检查。
+
+首次发布尝试曾在 Stop 前因缺少独立发布客户端的认证返回 `AUTH_REQUIRED`；该阻塞现已解除。用户将既有 Registry 登录凭据配置到受保护且未跟踪的 `.env.production.local` 后，登录和 Monitor/Forwarding 状态读取成功。该认证只供发布管理工具使用，BrainGym 运行时仍通过 stdio 与本机 IPC 接入 Hub。
 
 ## 已取得的证据
 
@@ -44,15 +46,28 @@
 
 主工作区原有的 `.agents/`、`.claude/` 和本机技能锁文件保留，按本次源码忽略边界加入本机 exclude；未提交这些文件。功能分支已推送并核对远端 SHA，随后 main 快进到 `b0f3339` 并推送，实际远端 SHA 核对一致。任务分支、本任务 worktree 及无效候选已清理；另一项功能 worktree 保留。已在稳定 main 重新 prepare 迁移阶段，清理 worktree 后候选仍能完成来源和摘要核验，源码合入不触发发布。
 
-## 现役入口的只读核验
+## 正式迁移与构建隔离复验
 
-在发布被认证关口拒绝后，对现役服务执行本机及真实 HTTPS 的健康、前缀页面与资源、匿名私人接口拒绝和全新 Chrome 加载检查，均通过。现有 Hub 仍指向原仓库，数据库路径仍为原绝对位置，配置修改时间与初始基线一致，正式目标目录尚未创建。这些结果证明原入口仍可用，不代表新版本已迁移。
+在本地 main 与远端 SHA 一致、工作区干净且候选证据有效时，从稳定 main 工作区执行 `npm run release -- deploy --candidate <有效候选>`，退出码 0；随后 `npm run release -- status` 返回 `published / verified`。候选运行源码来自 `70ed2b5`，main 后续只改文档，运行源码指纹一致，没有重新构建正式运行包。
+
+迁移前真实 Monitor 仅有 BrainGym 一项应用，磁盘定义与 Monitor 集合核对通过，无非目标应用待加载变化；托管 Node 与演练环境一致，备份空间充足。工具仅 Stop/Start BrainGym，停服后备份完整数据库目录及原程序，在受保护的配置替换和全局 Reload 后将 cwd 切到 `D:\Apps\BrainGym`。发布期间没有在正式目录安装依赖或构建，也没有回滚数据库。
+
+迁移后检查确认：
+
+- 正式目录全部 2827 个文件的摘要均与有效候选中的对应摘要一致，只包含程序、生产依赖、包清单及发行标记。
+- 新 Node 根进程的直接父进程为 WheelMaker Hub，Monitor 为 `running / healthy`，Forwarding 为 `ready`。
+- 数据库绝对位置、原 Origin、基础路径、回环 HOST/PORT、`COOKIE_SECURE=true` 保持不变；迁移前既有用户、凭据、有效会话和结果的指纹在迁移后仍匹配。离线备份也通过同一保留核验。
+- 本机及真实 HTTPS 的健康、页面、前缀资源、发行标记、匿名私人接口拒绝和全新 Chrome 加载检查全部通过。未向正式库写入测试身份、测试会话或成绩。
+
+随后在稳定主工作区执行 `npm run build`，退出码 0。复查确认正式目录全部文件摘要及 PID/instanceId 均未变，Monitor/Forwarding、本机及真实 HTTPS 页面和资源、全新浏览器加载检查也均通过。开发构建只更新仓库 dist，没有改变正式程序或进程。
+
+完整备份、已加载配置基线、迁移阶段日志、在线检查及构建前后对照保存在稳定主工作区受保护的 `.runtime/releases/`；有效候选和最近恢复材料保留。原任务 worktree 清理后，发布与验收都从稳定 main 完成。
 
 实际 HTTPS 响应含 CSP、防嵌入、`X-Content-Type-Options` 和 `Referrer-Policy`；未返回 HSTS 或 `Permissions-Policy`。没有声称代理补齐这些策略，也未修改网关。
 
 ## Findings
 
-未发现本次变更新增的阻塞性安全缺陷。以下为非阻塞的既有依赖风险；正式迁移因缺少控制认证未开始，整体验收未通过。
+未发现本次变更新增的阻塞性安全缺陷，spec 要求的代码、隔离故障场景、正式迁移与构建隔离验收均已完成。以下既有依赖告警及响应头加固缺口仍然存在。
 
 - **P2，既有依赖告警**：[package.json:26](../../package.json#L26)、[src/server/app.ts:164](../../src/server/app.ts#L164)。官方 npm 审计报告 1 high、2 moderate，涉及 `@fastify/static`、`glob`、`minimatch`，锁文件及依赖版本本次未变。两项静态服务告警依赖受保护的静态文件及路径过滤：当前 `dist/client` 全是公开资源，私人数据只经带会话授权的 API 返回，不使用 `allowedPath` 或路由守卫保护静态文件。6 个非规范路径检查返回 401/404，没有读取静态根目录外的隔离哨兵文件。该结论依赖公开静态目录边界，未来改变边界需重新评估。[维护者路径过滤公告](https://github.com/fastify/fastify-static/security/advisories/GHSA-8pvw-jcv7-9cmj)、[维护者路由守卫公告](https://github.com/fastify/fastify-static/security/advisories/GHSA-83w8-p2f5-377r)。
 - **P2，间接依赖的潜在资源消耗**：当前 static 插件使用默认 wildcard 分支，不执行 `glob` 扫描；项目不接受外部 glob 模式，也不依赖 AbortSignal 约束 glob 遍历。因此没有发现从请求触达这两项告警的路径。审计提出的修复包含 static 主版本升级，本任务没有未经评估直接升级。[glob 维护者公告](https://github.com/isaacs/node-glob/security/advisories/GHSA-3g3m-2fjr-6pw4)、[minimatch 维护者公告](https://github.com/isaacs/minimatch/security/advisories/GHSA-g3hv-75wg-m249)。
@@ -67,4 +82,4 @@
 
 ## Residual Risk
 
-正式迁移、正式数据库迁移前后的保留指纹，以及迁移后再次开发构建不影响正式资源，均未验证。真实 HTTPS 及浏览器检查当前只覆盖原运行版本；Monitor/Forwarding 的迁移状态也须在认证可用后核验。正式数据库只允许迁移备份及只读保留核验；登录和写入回归使用隔离库。恢复日志、完整备份与原始机器报告仅保存在受保护的忽略目录，不进入 Git。
+正式环境未执行登录或成绩写入测试；这些业务回归使用隔离数据库。对正式库仅执行了本次迁移所需的完整离线备份与只读保留核验。既有依赖告警、HSTS 和 `Permissions-Policy` 缺口仍在；既有同 Origin 信任及代理边界没有改变。恢复日志、完整备份、原始机器报告及 Registry 凭据仅保存在受保护的忽略位置，不进入 Git。

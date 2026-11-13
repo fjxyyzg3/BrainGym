@@ -69,9 +69,9 @@
 **Files:** 稳定 main 的验收文档与本计划；私有候选、备份、状态仅留在未跟踪 `.runtime/releases/`。
 
 - [x] 从稳定 main 重新调用 git-workflow prepare，确认当前源码与候选证据一致；读取现有运维与发布脚本前置条件，不输出私有入口或认证。
-- [ ] 使用已验证 candidate 执行 `npm run release -- deploy --candidate $releaseCandidate`，然后 `npm run release -- status`；复用现有 Stop／备份／恢复机制，定义未变不 Reload，不写正式测试身份或成绩。
-- [ ] 核对现役程序、Monitor／Forwarding、真实 HTTPS 与前缀静态资源、新模式页面及既有数据库只读指纹；失败保留恢复现场，不把健康接口单独视为发布成功。
-- [ ] 记录实际发布证据与残余风险，完成计划；文档检查及安全扫描后 finalize 发布文档，自动 commit／push 并核对远端，不宣称未完成的必需验证已完成。
+- [x] 使用已验证 candidate 执行 `npm run release -- deploy --candidate $releaseCandidate`，然后 `npm run release -- status`；复用现有 Stop／备份／恢复机制，定义未变不 Reload，不写正式测试身份或成绩。
+- [x] 核对现役程序、Monitor／Forwarding、真实 HTTPS 与前缀静态资源、新模式页面及既有数据库只读指纹；失败保留恢复现场，不把健康接口单独视为发布成功。
+- [x] 记录实际发布证据与残余风险，完成计划；文档检查及安全扫描后 finalize 发布文档，自动 commit／push 并核对远端，不宣称未完成的必需验证已完成。
 
 ## 执行证据
 
@@ -87,4 +87,7 @@
 
 - 代码阶段 finalize：任务分支及 main 实际远端 SHA 均核实为 `9783f2c446aa7f73904d8047f01ac92bfa5fa67b`；main 快进合入，无 PR，干净任务 worktree 和已合并的本地／远端任务分支均已清理。
 - 正式阶段从稳定 main 重新 prepare，候选封存及源码 fingerprint 有效，现役 healthy／Forwarding ready，定义不变。
-- 正式 deploy 被自动审批拒绝，命令未创建进程、未执行 Stop。拒绝理由是未见针对本次具体生产部署及短暂停服副作用的明确授权；不通过其他入口绕过。只读复查确认旧实例健康、转发 ready、配置未变、原数据保留，候选尚非现役程序。Task 5 的部署及在线验收保留未完成，等待用户明确授权。
+- 首次正式 deploy 被自动审批拒绝，命令未创建进程、未执行 Stop。拒绝理由是未见针对本次具体生产部署及短暂停服副作用的明确授权；不通过其他入口绕过。只读复查确认旧实例健康、转发 ready、配置未变、原数据保留，候选尚非现役程序。当时 Task 5 部署及在线验收保留未完成；后续授权和执行结果见下一条。
+
+- 2026-11-14：用户明确授权本次正式部署及短暂停服。稳定 main 重新 prepare，封存候选仍有效；受控 deploy 返回 published、status verified。实际程序摘要与候选一致，完整目录备份及现役数据指纹均保留既有用户／Token／会话／历史，定义和配置未改、未 Reload、回环监听保持。
+- 正式入口补充验收：HTTPS 资源／安全头、三路匿名接口 401/no-store、桌面 F/J/K、390px 结果、真实 PWA 离线与联网零补传通过；正式截图已查看。全部仅游客，无正式身份或测试成绩写入。初次补充脚本缺页面就绪等待，修正脚本后全套通过，未变更产品或候选。既有 HSTS／Permissions-Policy 缺失为 P2，实机／Safari／锁屏仍未覆盖。

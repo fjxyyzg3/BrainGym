@@ -2,7 +2,7 @@
 
 日期：2026-11-14。依据：[已批准 spec](../scope/2026-11-13-triple-n-back.md)、[实施计划](../plans/2026-11-13-triple-n-back/plan-triple-n-back.md)。
 
-当前状态：代码、文档及候选演练已完成并合入推送 main；正式部署被自动审批拒绝，未执行停服或替换，整体交付仍待具体部署授权和在线验收。
+当前状态：三元素模式已使用既有候选发布到正式程序目录，部署及实际 HTTPS／离线验收通过，既有数据保留。首次部署请求的自动审批阻塞已由用户明确授权解除。
 
 ## 验证环境与命令
 
@@ -63,16 +63,31 @@ Node.js `v26.12.0`、npm `11.20.0`，本机 Chrome，由 Playwright 启动。未
 
 ## 正式发布
 
-代码阶段 main 已快进合入并推送 `9783f2c`，真实远端 SHA 已核对；未创建 PR，已合并的任务分支和干净 worktree 已按偏好清理。正式阶段在稳定 main 重新执行 prepare，确认无改动且与远端一致。
+2026-11-14，用户明确授权使用已演练候选部署到正式目录，允许短暂停服、备份、替换和验收，失败自动恢复。首次请求曾被自动审批以具体部署授权不足拒绝，未执行 Stop；本次取得明确授权后从稳定 main（发布前为 `efdfadf`）重新 prepare，刷新远端并确认工作区干净。
 
-只读预检确认候选封存、8 项演练证据及源码 fingerprint 有效，定义无需变化，现役 healthy、Forwarding ready；私有目录保存了配置和数据库只读基线。随后请求执行 `npm run release -- deploy --candidate`，自动审批在进程创建前拒绝：认为尚缺用户对本次具体生产部署及短暂停服副作用的明确授权。该命令未执行，未使用其他入口绕过。
+`assertPublishable` 再次核对候选封存、全部运行包摘要、Node 环境和运行源码 fingerprint；候选仍有效，复用上文 8 项隔离演练证据，没有重建、修改或更换候选。预检确认定义不变、现役健康且无待重启状态。
 
-拒绝后仅执行 `npm run release -- status` 及只读校验：旧发布现场仍为 `published / verified`，现役程序不是本次候选；服务健康、转发 ready、配置摘要与基线相同，既有数据指纹保留。此处 published 表示此前版本状态，不能视为三路模式已经上线。
+执行 `npm run release -- deploy --candidate $releaseCandidate`，随后执行 `npm run release -- status`。工具按应用标识停止 BrainGym，确认停止后备份完整数据库目录和原程序，再替换已演练产物并启动；deploy 返回 `passed: true / published`，status 返回 `published / verified`。发布上下文的 definitionWritten、loadRequested 均为 false，没有写 Hub 定义或请求全局 Reload，也没有回滚数据库。
 
-**Findings**：代码差异未发现 P0/P1；当前阻塞是自动审批要求具体部署授权，并非测试或候选失败。
+| 发布检查                  | 实际结果                                                                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 程序与候选                | 正式程序完整文件清单与候选摘要一致，发行版本匹配；仅程序替换，使用原数据库位置                                                                                |
+| 备份与既有数据            | 备份库及现役库只读指纹均保留原用户、Token 摘要、有效会话和历史；浏览器验收后再次核对保留                                                                      |
+| Monitor／Forwarding／绑定 | 新实例 running、healthy，无 pendingRestart，Forwarding ready；实例标识已更新，3001 仅监听 127.0.0.1                                                           |
+| 配置与其他应用            | 配置和目标定义摘要与发布前一致；本次 Monitor 无非目标应用，集合比较一致；未 Reload                                                                            |
+| 实际 HTTPS                | 入口、前缀资源、发行标记、CSP／防嵌入、nosniff、Referrer-Policy 及真实浏览器加载通过；未跳过 TLS 校验                                                         |
+| 私人接口                  | 三路模式 history／bests 匿名请求均为 401 且 no-store；未创建正式测试身份或使用真实账号登录                                                                    |
+| 桌面三路                  | 大厅三模式、新模式六色和五个 N 值可见；warmup 拒绝输入、数字范围正确、留空隐藏数字；F/J/K 同轮独立标记，下一轮状态重置；三路各合计 30，综合显示符合未舍入均值 |
+| 手机模拟                  | 390px 下格内数字、三个按钮与结果正常，无整页横向溢出；完全不操作得三路及综合 50.0 分，已查看正式页面截图                                                      |
+| 正式 PWA 离线             | 实际 worker 完成缓存后离线冷开三路模式，明确选择游客，完成得三路及综合 50.0；恢复联网仍为游客，零成绩 POST                                                    |
+| 浏览器与本地存储          | 无页面运行错误；localStorage、IndexedDB 均为空，Cache Storage 无 API 请求；全过程仅游客练习，未上传正式测试成绩                                               |
 
-**Verification**：代码阶段 94 项 Node、两路径各 37 项浏览器及 8 项候选检查通过；正式阶段仅完成候选／配置／现役状态预检和拒绝后的只读核验。脱敏检查保存在忽略目录 `.runtime/verification/triple-n-back-production/`，原始认证和入口未写入跟踪文件。
+补充浏览器验收首轮在 hash 切换完成前读取色板，得到 0 项；为验收脚本补上页面就绪等待后，重新完成全部上述真实入口检查。此修正未改变产品、候选或服务配置。
 
-**Residual Risk**：正式实例仍运行此前版本；本次新模式的真实 HTTPS、正式 PWA 和发布后保留性验收尚未执行。获准后复核现有候选是否仍有效，再走既有 Stop／完整目录备份／替换／验收或恢复流程，不复用失效证据。
+**Findings**：未发现本次发布的 P0/P1 阻塞问题。P2：实际 HTTPS 响应缺少 HSTS 和 Permissions-Policy，与此前入口检查一致；脱敏证据为私有 post-deploy.json 中对应布尔值为 false。该项保留为代理加固建议，本次未放宽现有安全策略。
+
+**Verification**：复用 94 项 Node、两路径各 37 项浏览器及 8 项候选演练证据；新增受控 deploy、status、程序与备份／数据库只读摘要核验、实际 HTTPS 三路游客／手机／离线检查，并人工查看正式截图。私有基线、结果和截图保存在忽略目录 `.runtime/verification/triple-n-back-production/`，真实入口、认证和部署现场未写入跟踪文件。
+
+**Residual Risk**：实体 Android/iOS、Safari 和实际锁屏仍未实测；Chromium 模拟与真实 hidden 不替代这些证据。HSTS／Permissions-Policy 为后续代理加固项。既有已安装 PWA 继续遵循等待更新策略，关闭所有 BrainGym 标签页和独立窗口后再打开使用已准备的新版本。
 
 来源：[共享合同](../../src/shared/contracts.ts)、[共享规则](../../src/shared/rules.ts)、[引擎](../../src/client/game.ts)、[服务端解析](../../src/server/store.ts)、[客户端](../../src/client/App.tsx)、[三路 Node 测试](../../tests/triple-n-back.test.ts)、[三路浏览器测试](../../tests/e2e/triple-n-back.spec.ts)、[PWA 测试](../../tests/e2e/pwa.spec.ts)、[原生后台脚本](../../scripts/check-native-visibility.mjs)。

@@ -1,6 +1,6 @@
 # 位置＋颜色 N-back 验收记录
 
-日期：2026-11-13。范围：[已批准 spec](../scope/2026-11-13-spatial-color-n-back.md)。代码与双路径自动化验收通过；隔离候选演练尚待执行。正式部署不在该 spec 授权范围内，未操作正式服务、Hub 配置或正式数据库，不将代码交付记为整体上线完成。
+日期：2026-11-13。范围：[已批准 spec](../scope/2026-11-13-spatial-color-n-back.md)。代码、双路径自动化验收及隔离候选演练通过，Git 收尾结果见下文。正式部署不在该 spec 授权范围内，未操作正式服务、Hub 配置或正式数据库，不将代码交付记为整体上线完成。
 
 ## 本次验证
 
@@ -51,6 +51,10 @@
 
 ## 演练与 Git 状态
 
-实现提交完成完整门槛后执行 `npm run rehearse`；该步骤与后续 Git 收尾结果在实际执行后补记。本次实际截图保留于稳定工作区忽略的 `.runtime/verification/spatial-color-n-back/`，不进入提交或候选镜像。
+实现提交为 `8540adb`（`feat: add position and color n-back training`）。随后 `npm run rehearse` 从干净提交重新归档构建，完成 typecheck、build、86 项 Node 测试、根路径及前缀各 26 项浏览器测试、开发代理验证、运行时验证和真实隔离 Hub 演练。演练包括备份失败恢复、验证失败回退、数据保留与全局 Reload 保护，最终返回 `passed: true`、`stage: completed`。
+
+首次沙箱运行因 Windows 目录保护权限返回 `FILESYSTEM_PROTECTION`；取得所需权限后重试成功，未削弱保护或修改正式服务。只读调用 `readEvidence` 核验封存及运行时文件摘要，8 项检查完整，候选源码 fingerprint 与任务提交一致。
+
+候选保留在稳定工作区忽略的 `.runtime/releases/candidates/8540adb3c10f-7db199fe-6931-402c-ae5c-51567b6ad338/`；截图保留于 `.runtime/verification/spatial-color-n-back/`，不进入提交或候选镜像。分支推送、合并和清理尚待本次 Git finalize 执行后记录。
 
 来源：[实施计划](../plans/2026-11-13-spatial-color-n-back/plan-spatial-color-n-back.md)、[新增 Node 测试](../../tests/color-n-back.test.ts)、[双路浏览器测试](../../tests/e2e/color-n-back.spec.ts)、[PWA 浏览器测试](../../tests/e2e/pwa.spec.ts)、[原生后台脚本](../../scripts/check-native-visibility.mjs)。

@@ -1,6 +1,6 @@
 # PWA 本次验收记录
 
-日期：2026-11-13。范围：[已批准 spec](../scope/2026-11-12-pwa-support.md)。实现位于 `feature/pwa-support`；自动化验收记录如下，实际安装及手机真机验收尚未完成，不能据此宣称所有目标平台通过。
+日期：2026-11-13。范围：[已批准 spec](../scope/2026-11-12-pwa-support.md)。实现已合入 `main`，工作分支已清理；自动化验收记录如下，实际安装及手机真机验收尚未完成，不能据此宣称所有目标平台通过。
 
 ## 环境与命令
 
@@ -60,4 +60,6 @@
 
 ## 交付状态
 
-代码 checkpoint 为 a12d2a6（feat: add installable PWA and explicit offline practice），批准 spec 为 977788d，计划为 e550904。当前为 awaiting_review：代码及自动化已完成，平台实际安装/真机证据尚缺；不合并 main 或清理任务分支/worktree，保留后续验收入口。根工作树原有的未跟踪技能配置不属于本任务。未创建 PR，也未部署。
+代码 checkpoint 为 a12d2a6（feat: add installable PWA and explicit offline practice），批准 spec 为 977788d，计划为 e550904。用户于 2026-11-13 明确要求合入主干、推送并清理工作分支；`main` 已快进合入至 d998dd3，并核对远端同 SHA。本地和远端的 `feature/pwa-support` 及其 worktree 已删除，根工作树原有的未跟踪技能配置保留。未创建 PR，也未部署。
+
+Git 收尾完成不代表平台验收完成。实际安装/真机证据仍缺，按上方清单继续验收；本轮仅同步交付状态，没有修改运行代码，复用同一实现的既有测试与安全审查证据。

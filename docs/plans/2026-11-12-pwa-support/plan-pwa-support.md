@@ -49,7 +49,7 @@
 - [ ] 实际平台：记录桌面实际安装/独立窗口、Android 与 iPhone/iPad 真机安装/安全区/后台行为；缺少的证据明确标记未验证，任务不报告全面完成。
 - [x] 使用 wiki/write-doc 流程同步已验证机制；README 说明安装菜单、预先缓存、离线不保存和关闭全部窗口更新。验收记录只含本地或保留示例，不写真实入口和凭据。
 - [x] 安全审查：status/stat/实际 diff/文件清单，按认证、数据访问、浏览器暴露、网络部署、凭据文档、依赖与测试逐项检查；输出 Findings/Verification/Residual Risk。
-- [ ] Git finalize：刷新远端并按偏好同步、push 后核对实际 SHA；完整完成且 main 干净才合并/清理。若真机验收缺失，保留 feature 分支/worktree，报告未完成项，不擅自降低验收。
+- [x] Git finalize：按用户于 2026-11-13 的明确收尾指令合入主干并推送，核对远端 SHA 后清理 feature 分支/worktree；保留实际安装和真机未验收的记录，不改变验收结论。
 
 ## 执行记录
 
@@ -61,3 +61,5 @@
 - 2026-11-13：最终序列 typecheck、build、42 项 Node 测试、根路径 16 项 e2e、同一构建前缀路径 16 项 e2e 均通过。新增故障用例覆盖资源 HTTP 503 与错版 HTML；既有完整门槛保留。Edge 针对性 2 项通过，最终 Docker 镜像及隔离持久化验收通过。实际 OS 安装和手机真机仍未验证，保留平台验收项。
 
 - 2026-11-13：代码 checkpoint a12d2a6（feat: add installable PWA and explicit offline practice）。36 个本地文档链接检查、Prettier、仓库默认行尾规则下的 git diff --check、敏感地址和凭据扫描通过；扫描未发现新增私有地址、凭据或运行时产物。图标与离线移动模拟视口截图已检查。平台真机项仍未完成，Git 以 awaiting_review 收尾，不报告全面完成。
+
+- 2026-11-13：用户明确要求合并到主干并推送、清理 work branch。main 快进合入 d998dd3 并推送，远端 SHA 核对一致；任务本地/远端分支和 worktree 已清理，根目录原有未跟踪配置保持不变。本次仅更新收尾文档，复用既有运行代码验证；实际安装与真机验收仍未完成。

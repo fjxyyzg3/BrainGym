@@ -68,14 +68,14 @@
 - [x] 依次执行 `npm run typecheck`、`npm run build`、`npm test`、`npm run test:e2e`；同一构建设置 `E2E_BASE_PATH=/braingym/` 再执行浏览器测试，finally 清除变量。失败修实现或环境，不削弱门槛。
 - [x] 按最终 status、stat、文件列表和 diff 执行中文 Findings／Verification／Residual Risk 安全审查。未改依赖则不新增无必要的 audit；若依赖实际变化，执行 npm audit --json 并评估。
 - [x] 所有必需代码门槛通过后按 git-workflow checkpoint 只提交任务文件；记录 hash。通过的最终证据可复用，不为提交重复全量测试。
-- [ ] 执行 `npm run rehearse` 准备真实隔离候选并记录证据；若运行源码改变则重新生成候选。提交必要的验收文档，finalize 刷新／rebase／push，main 干净时合入并 push，核对实际远端 SHA，按偏好清理任务分支及 worktree。
+- [x] 执行 `npm run rehearse` 准备真实隔离候选并记录证据；若运行源码改变则重新生成候选。提交必要的验收文档，finalize 刷新／rebase／push，main 干净时合入并 push，核对实际远端 SHA，按偏好清理任务分支及 worktree。
 
 ## Task 5：稳定 main 正式发布与整体验收
 
-- [ ] 从稳定 main 重新调用 git-workflow prepare；按运维文档核对私有现役定义、候选与运行源码一致性、正式数据保留和真实入口，凭据不输出到日志／聊天／跟踪文件。
-- [ ] 显式 `npm run release -- deploy --candidate $releaseCandidate`，不变定义不 Reload，保留 Stop 请求起的恢复责任；失败只恢复程序／本次定义，不回滚数据库。
-- [ ] `npm run release -- status` 及真实 HTTPS 静态入口／资源／安全头／Cookie／API 拒绝边界验收；正式库不创建测试身份或成绩。读取部署数据保留证据确认旧数据及新表元数据保持。
-- [ ] 记录正式结果；只有正式验收完成才报告整体完成。如环境或权限阻塞，记录具体证据并按真实结果 finalize，不把未执行项记为通过。
+- [x] 从稳定 main 重新调用 git-workflow prepare；按运维文档核对私有现役定义、候选与运行源码一致性、正式数据保留和真实入口，凭据不输出到日志／聊天／跟踪文件。
+- [x] 显式 `npm run release -- deploy --candidate $releaseCandidate`，不变定义不 Reload，保留 Stop 请求起的恢复责任；失败只恢复程序／本次定义，不回滚数据库。
+- [x] `npm run release -- status` 及真实 HTTPS 静态入口／资源／安全头／Cookie／API 拒绝边界验收；正式库不创建测试身份或成绩。读取部署数据保留证据确认旧数据及新表元数据保持。
+- [x] 记录正式结果；只有正式验收完成才报告整体完成。如环境或权限阻塞，记录具体证据并按真实结果 finalize，不把未执行项记为通过。
 
 ## 执行记录
 
@@ -92,3 +92,9 @@
 - 代码 checkpoint：c63c70e "feat: add adaptive Corsi block memory training"（已 rebase 到最新 origin/main，仅增加既有 N-back 验收文档，运行源码与已通过的证据一致）。隔离候选演练正在执行。
 
 - 隔离演练通过：候选 c63c70e2e4b7-d15da7c1-c245-4002-ab31-0bc96e9ce03d；独立 typecheck/build、110 项 Node、双路径各 62 项浏览器、真实 Vite、真实隔离 Hub 迁移／备份失败恢复／回退／全局 Reload 保护均通过。候选保存在稳定主工作区，待 Git finalize 后进入正式发布。
+
+- 代码 Git finalize 完成：5e54c1f 已推送并核对 feature/corsi-blocks 和 main；main 干净时快进合入，未创建 PR，任务 worktree、本地及远端任务分支已清理。
+
+- 正式阶段重新 prepare：稳定 main，基线 5e54c1f，无预存修改，与 origin/main 一致；候选源指纹和运行包复核通过。显式 deploy 操作 28a91a0c-4fbc-4a5f-b11e-ce974ae0aa82 成功，status 为 published/verified。未写定义或 Reload；旧数据指纹保持、schema 1 及附加表存在。真实 HTTPS 正倒序游客完整局无上传，匿名／Origin 拒绝边界及安全头已核验。
+
+- 全部产品验收完成。残余风险：实体手机／Safari／物理锁屏未验证，DOM 回执不保证像素；HSTS／Permissions-Policy 为既有 P2 加固项。最终仅同步验收文档，复用仍有效的代码验证与候选证据。

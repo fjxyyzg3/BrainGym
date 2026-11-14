@@ -738,10 +738,11 @@ p {
   font-variant-numeric: tabular-nums;
 }
 .match-button {
-  width: 230px;
-  height: 56px;
-  font-size: 16px;
-  gap: 50px;
+  width: min(230px, 100%);
+  min-block-size: 56px;
+  height: auto;
+  font-size: 1rem;
+  gap: 8px;
   user-select: none;
 }
 .match-button:disabled {
@@ -751,6 +752,8 @@ p {
   background: var(--accent-hover);
 }
 .match-button kbd {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-family: inherit;
   font-size: 0.75rem;
   font-weight: 400;

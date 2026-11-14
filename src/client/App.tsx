@@ -960,7 +960,7 @@ function Training({
                         </small>
                       </span>
                     ) : (
-                      "已标记匹配"
+                      "已标记"
                     )}
                   </>
                 ) : (

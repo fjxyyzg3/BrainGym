@@ -1,4 +1,10 @@
-import { test as base, expect, chromium, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  chromium,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
@@ -60,6 +66,30 @@ async function finish(page: Page) {
     page.getByRole("heading", { name: "练习完成，做得不错。" }),
   ).toBeVisible();
 }
+async function expectButtonTextInside(button: Locator) {
+  const overflowingText = await button.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const outside: string[] = [];
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      if (
+        Array.from(range.getClientRects()).some(
+          (rect) =>
+            rect.left < bounds.left - 0.5 ||
+            rect.right > bounds.right + 0.5 ||
+            rect.top < bounds.top - 0.5 ||
+            rect.bottom > bounds.bottom + 0.5,
+        )
+      )
+        outside.push(node.textContent ?? "");
+    }
+    return outside;
+  });
+  expect(overflowingText).toEqual([]);
+}
 
 test("desktop guest completes a real game; login on result does not upload it", async ({
   page,
@@ -100,6 +130,28 @@ test("desktop guest completes a real game; login on result does not upload it", 
   ).resolves.toMatchObject({ total: 0 });
   expect(errors).toEqual([]);
 });
+for (const width of [320, 390, 1280])
+  test(`space match feedback stays inside the button at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await training(page);
+    await start(page);
+    await page.clock.fastForward(5100);
+    await page.getByRole("button", { name: "匹配", exact: true }).click();
+    const marked = page.getByRole("button", {
+      name: "已标记匹配",
+      exact: true,
+    });
+    await expect(marked).toBeDisabled();
+    await expectButtonTextInside(marked);
+    await expect(marked).toHaveText("已标记空格");
+    await page.clock.fastForward(2500);
+    await page.keyboard.press("Space");
+    await expect(marked).toBeDisabled();
+    await expectButtonTextInside(marked);
+    await expect(marked).toHaveText("已标记空格");
+  });
 test.describe("mobile device", () => {
   test.use({
     hasTouch: true,
@@ -127,12 +179,18 @@ test.describe("mobile device", () => {
     await expect(
       page.getByRole("button", { name: "已标记匹配" }),
     ).toBeDisabled();
+    await expectButtonTextInside(
+      page.getByRole("button", { name: "已标记匹配" }),
+    );
     await page.clock.fastForward(2500);
     const scroll = await page.evaluate(() => scrollY);
     await page.keyboard.press("Space");
     await expect(
       page.getByRole("button", { name: "已标记匹配" }),
     ).toBeDisabled();
+    await expectButtonTextInside(
+      page.getByRole("button", { name: "已标记匹配" }),
+    );
     expect(await page.evaluate(() => scrollY)).toBe(scroll);
     await page.screenshot({
       path: join(screenshotDirectory, "mobile-training.png"),

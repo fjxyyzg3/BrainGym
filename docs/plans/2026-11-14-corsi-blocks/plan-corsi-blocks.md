@@ -67,7 +67,7 @@
 - [x] 调用 wiki 同步实际规则、时间／世代合同、资源恢复、数据兼容与运维边界，验收记录只写真实证据，区分模拟及实机未验证。
 - [x] 依次执行 `npm run typecheck`、`npm run build`、`npm test`、`npm run test:e2e`；同一构建设置 `E2E_BASE_PATH=/braingym/` 再执行浏览器测试，finally 清除变量。失败修实现或环境，不削弱门槛。
 - [x] 按最终 status、stat、文件列表和 diff 执行中文 Findings／Verification／Residual Risk 安全审查。未改依赖则不新增无必要的 audit；若依赖实际变化，执行 npm audit --json 并评估。
-- [ ] 所有必需代码门槛通过后按 git-workflow checkpoint 只提交任务文件；记录 hash。通过的最终证据可复用，不为提交重复全量测试。
+- [x] 所有必需代码门槛通过后按 git-workflow checkpoint 只提交任务文件；记录 hash。通过的最终证据可复用，不为提交重复全量测试。
 - [ ] 执行 `npm run rehearse` 准备真实隔离候选并记录证据；若运行源码改变则重新生成候选。提交必要的验收文档，finalize 刷新／rebase／push，main 干净时合入并 push，核对实际远端 SHA，按偏好清理任务分支及 worktree。
 
 ## Task 5：稳定 main 正式发布与整体验收
@@ -88,3 +88,7 @@
 - Task 3：真实归档基线构建缺少卡片产生浏览器 RED；可见刺激、离线游客及 6 项原生后台检查已通过。文稿经独立优化和只读复核通过；完整根路径及前缀回归进行中。原生脚本等待 Chrome 启动帧稳定后开局，保留 100 ms 判废门槛。
 
 - Task 4：typecheck、build、Node 110/110、根路径浏览器 62/62、同构建前缀浏览器 62/62 全部通过；环境变量已清除。凭据／禁止产物扫描及文档链接检查通过；依赖版本未变。等待代码 checkpoint 与隔离演练。
+
+- 代码 checkpoint：c63c70e "feat: add adaptive Corsi block memory training"（已 rebase 到最新 origin/main，仅增加既有 N-back 验收文档，运行源码与已通过的证据一致）。隔离候选演练正在执行。
+
+- 隔离演练通过：候选 c63c70e2e4b7-d15da7c1-c245-4002-ab31-0bc96e9ce03d；独立 typecheck/build、110 项 Node、双路径各 62 项浏览器、真实 Vite、真实隔离 Hub 迁移／备份失败恢复／回退／全局 Reload 保护均通过。候选保存在稳定主工作区，待 Git finalize 后进入正式发布。

@@ -27,18 +27,24 @@ RED 证据：规则初始断言因缺少 Corsi 标识失败；HTTP progress 初�
 
 环境：Windows、Node.js v26.12.0，锁定依赖未变；浏览器使用已安装 Chrome，设置 `PLAYWRIGHT_CHROMIUM_EXECUTABLE`，未新增依赖。
 
-| 命令／检查                                    | 结果                             |
-| --------------------------------------------- | -------------------------------- |
-| `npm run typecheck`                           | 通过                             |
-| `npm run build`                               | 通过                             |
-| `npm test`                                    | 110/110 通过                     |
-| `npm run test:e2e`                            | 62/62 通过                       |
-| `E2E_BASE_PATH=/braingym/` 的同构建浏览器测试 | 62/62 通过，finally 清除环境变量 |
-| `git diff --check`、变更文件凭据／产物扫描    | 通过，未发现凭据或禁止产物       |
-| `npm run rehearse`                            | 待代码提交后执行                 |
-| 正式发布与状态／在线验收                      | 待 main 推送后执行               |
+| 命令／检查                                    | 结果                                                                    |
+| --------------------------------------------- | ----------------------------------------------------------------------- |
+| `npm run typecheck`                           | 通过                                                                    |
+| `npm run build`                               | 通过                                                                    |
+| `npm test`                                    | 110/110 通过                                                            |
+| `npm run test:e2e`                            | 62/62 通过                                                              |
+| `E2E_BASE_PATH=/braingym/` 的同构建浏览器测试 | 62/62 通过，finally 清除环境变量                                        |
+| `git diff --check`、变更文件凭据／产物扫描    | 通过，未发现凭据或禁止产物                                              |
+| `npm run rehearse`                            | 通过：独立构建、110 项 Node、双路径各 62 项浏览器、真实 Vite 及隔离 Hub |
+| 正式发布与状态／在线验收                      | 待 main 推送后执行                                                      |
 
 桌面准备、正倒序结果、个人记录和移动触屏截图由浏览器测试生成到忽略的 `test-results/`；不提交带测试账号信息的截图。Corsi 规则、架构及运维文稿经过起草、独立优化、主代理核对和独立只读复核。
+
+## 隔离候选
+
+代码提交为 c63c70e（feat: add adaptive Corsi block memory training）。候选目录名为 c63c70e2e4b7-d15da7c1-c245-4002-ab31-0bc96e9ce03d，保存在稳定主工作区的 .runtime/releases/candidates/，不随任务 worktree 清理。演练的真实隔离 Hub 确认迁移成功、备份失败恢复、程序回退数据保留及全局 Reload 保护均通过。
+
+正式发布前只读核验：现役定义无需改变，Node 版本匹配，HTTPS、Secure Cookie、前缀路径及回环绑定有效。正式发布仍待 main 推送。
 
 ## Findings
 
@@ -46,7 +52,7 @@ RED 证据：规则初始断言因缺少 Corsi 标识失败；HTTP progress 初�
 
 ## Verification
 
-实际命令和结果见上表。演练和正式在线验收完成前，不把整体交付标为通过。
+实际命令和结果见上表。正式在线验收完成前，不把整体交付标为通过。
 
 ## Residual Risk
 

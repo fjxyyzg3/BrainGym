@@ -9,6 +9,8 @@ import {
 import { api, ApiError } from "./api";
 import { CorsiTraining } from "./CorsiTraining";
 import { CorsiRecords } from "./CorsiRecords";
+import { StroopTraining } from "./StroopTraining";
+import { StroopRecords } from "./StroopRecords";
 import { NBackGame, type GameSnapshot, type Dimension } from "./game";
 import {
   generateSequence,
@@ -22,6 +24,7 @@ import {
 } from "../shared/rules";
 import {
   GAME,
+  STROOP_GAME,
   COLOR_GAME,
   TRIPLE_GAME,
   GAME_IDS,
@@ -48,6 +51,7 @@ import {
 
 type Page =
   | "home"
+  | "stroop"
   | "n-back"
   | "color-n-back"
   | "triple-n-back"
@@ -56,32 +60,36 @@ type Page =
   | "corsi-backward";
 const applicationTitle = document.title;
 const currentPage = (): Page =>
-  location.hash === "#corsi"
-    ? "corsi"
-    : location.hash === "#corsi-backward"
-      ? "corsi-backward"
-      : location.hash === "#n-back"
-        ? "n-back"
-        : location.hash === "#color-n-back"
-          ? "color-n-back"
-          : location.hash === "#triple-n-back"
-            ? "triple-n-back"
-            : location.hash === "#records"
-              ? "records"
-              : "home";
+  location.hash === "#stroop"
+    ? "stroop"
+    : location.hash === "#corsi"
+      ? "corsi"
+      : location.hash === "#corsi-backward"
+        ? "corsi-backward"
+        : location.hash === "#n-back"
+          ? "n-back"
+          : location.hash === "#color-n-back"
+            ? "color-n-back"
+            : location.hash === "#triple-n-back"
+              ? "triple-n-back"
+              : location.hash === "#records"
+                ? "records"
+                : "home";
 const go = (page: Page) => {
   location.hash = page;
 };
 const trainingPage = (game: GameId): Page =>
-  game === CORSI_FORWARD
-    ? "corsi"
-    : game === CORSI_BACKWARD
-      ? "corsi-backward"
-      : game === GAME
-        ? "n-back"
-        : game === COLOR_GAME
-          ? "color-n-back"
-          : "triple-n-back";
+  game === STROOP_GAME
+    ? "stroop"
+    : game === CORSI_FORWARD
+      ? "corsi"
+      : game === CORSI_BACKWARD
+        ? "corsi-backward"
+        : game === GAME
+          ? "n-back"
+          : game === COLOR_GAME
+            ? "color-n-back"
+            : "triple-n-back";
 const pageGame = (page: Page): NBackGameId =>
   page === "triple-n-back"
     ? TRIPLE_GAME
@@ -308,7 +316,7 @@ export function App() {
     document.title =
       page === "home"
         ? applicationTitle
-        : `${page === "records" ? "个人记录" : page === "corsi" ? "顺序记忆 · 正序" : page === "corsi-backward" ? "顺序记忆 · 倒序" : GAME_NAMES[pageGame(page)]} | ${applicationTitle}`;
+        : `${page === "records" ? "个人记录" : page === "stroop" ? GAME_NAMES[STROOP_GAME] : page === "corsi" ? "顺序记忆 · 正序" : page === "corsi-backward" ? "顺序记忆 · 倒序" : GAME_NAMES[pageGame(page)]} | ${applicationTitle}`;
   }, [page]);
   useEffect(() => {
     void refresh();
@@ -459,7 +467,17 @@ export function App() {
         {page === "home" ? (
           <Home />
         ) : page === "records" ? (
-          isCorsiGameId(recordsGame) ? (
+          recordsGame === STROOP_GAME ? (
+            <StroopRecords
+              user={user}
+              revision={revision}
+              onGame={setRecordsGame}
+              onTrain={(game) => go(trainingPage(game))}
+              onLogin={openLogin}
+              onError={onError}
+              onUser={verifiedUser}
+            />
+          ) : isCorsiGameId(recordsGame) ? (
             <CorsiRecords
               gameId={recordsGame}
               user={user}
@@ -481,6 +499,16 @@ export function App() {
               onUser={verifiedUser}
             />
           )
+        ) : page === "stroop" ? (
+          <StroopTraining
+            user={user}
+            offline={offline}
+            onUser={verifiedUser}
+            onError={onError}
+            onSaved={savedCallback}
+            onRecords={openRecords}
+            onAbortNotice={abortNotice}
+          />
         ) : page === "corsi" || page === "corsi-backward" ? (
           <CorsiTraining
             key={page}
@@ -555,6 +583,23 @@ function Home() {
             </button>
           </article>
         ))}
+        <article className="game-card" aria-labelledby="stroop-title">
+          <div className="game-card-icon">
+            <span className="stroop-mini" aria-hidden="true">
+              色
+            </span>
+          </div>
+          <h2 id="stroop-title">颜色干扰 · Stroop</h2>
+          <p className="game-description">选择字体颜色，忽略文字的意思。</p>
+          <div className="game-meta">
+            <span>40 题</span>
+            <span>准确率与反应时间</span>
+          </div>
+          <button className="primary card-start" onClick={() => go("stroop")}>
+            开始训练
+            <Icon name="arrow" size={18} />
+          </button>
+        </article>
         <article className="game-card" aria-labelledby="corsi-title">
           <div className="game-card-icon">
             <MiniGrid />

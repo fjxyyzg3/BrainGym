@@ -221,13 +221,14 @@ export function databaseFingerprints(path: string): Fingerprints {
     )
       throw new ReleaseError("SCHEMA_UNSUPPORTED", "正式数据库 schema 不兼容");
     const result: Fingerprints = {};
-    const optional = ["corsi_results", "corsi_progress_resets"].filter(
-      (table) =>
-        database
-          .prepare(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
-          )
-          .get(table),
+    const optional = [
+      "corsi_results",
+      "corsi_progress_resets",
+      "stroop_results",
+    ].filter((table) =>
+      database
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
+        .get(table),
     );
     for (const table of [
       "users",
@@ -243,7 +244,9 @@ export function databaseFingerprints(path: string): Fingerprints {
           continue;
         const key = hash(
           JSON.stringify(
-            table === "results" || table === "corsi_results"
+            table === "results" ||
+              table === "corsi_results" ||
+              table === "stroop_results"
               ? [row.user_id, row.result_id]
               : table === "corsi_progress_resets"
                 ? [row.user_id, row.game, row.version]

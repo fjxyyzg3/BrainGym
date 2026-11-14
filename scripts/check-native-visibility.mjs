@@ -8,6 +8,11 @@ import { normalizeBasePath } from "../dist/server/shared/paths.js";
 
 const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);
 const corsi = process.env.VISIBILITY_GAME?.startsWith("corsi-");
+const stroop = process.env.VISIBILITY_GAME === "stroop";
+const startSelector = stroop
+  ? '[data-testid="stroop-start"]'
+  : ".start-session";
+const playSelector = stroop ? ".stroop-training" : ".play-page";
 const corsiPhase = process.env.VISIBILITY_CORSI_PHASE ?? "presenting";
 
 // Use raw CDP: Playwright deliberately forces pages to remain visible. This
@@ -74,7 +79,7 @@ try {
       socket.send(JSON.stringify({ id, method, params, sessionId }));
     });
   const { targetId } = await send("Target.createTarget", {
-    url: `${new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000").origin}${basePath}#${corsi ? (process.env.VISIBILITY_GAME === "corsi-backward" ? "corsi-backward" : "corsi") : process.env.VISIBILITY_GAME === "spatial-color-number-n-back" ? "triple-n-back" : process.env.VISIBILITY_GAME === "spatial-color-n-back" ? "color-n-back" : "n-back"}`,
+    url: `${new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000").origin}${basePath}#${stroop ? "stroop" : corsi ? (process.env.VISIBILITY_GAME === "corsi-backward" ? "corsi-backward" : "corsi") : process.env.VISIBILITY_GAME === "spatial-color-number-n-back" ? "triple-n-back" : process.env.VISIBILITY_GAME === "spatial-color-n-back" ? "color-n-back" : "n-back"}`,
   });
   const { sessionId } = await send("Target.attachToTarget", {
     targetId,
@@ -89,7 +94,12 @@ try {
       )
     ).result.value;
   for (let i = 0; i < 100; i++) {
-    if (await evaluate("!!document.querySelector('.start-session')")) break;
+    if (
+      await evaluate(
+        `!!document.querySelector(${JSON.stringify(stroop ? ".stroop-start-actions" : startSelector)})`,
+      )
+    )
+      break;
     await delay(100);
   }
   let uploads = 0;
@@ -107,9 +117,8 @@ try {
     const account = store.createUser("Native visibility verification");
     // Corsi adds six lifecycle cases. Seed their real sessions in the isolated
     // database so they don't exhaust unrelated tests' HTTP login budget.
-    const fixtureSession = corsi
-      ? store.login(account.token, Date.now()).session
-      : null;
+    const fixtureSession =
+      corsi || stroop ? store.login(account.token, Date.now()).session : null;
     store.close();
     if (fixtureSession) {
       const cookie = await send(
@@ -138,7 +147,7 @@ try {
     for (let i = 0; i < 100; i++) {
       if (
         await evaluate(
-          "!!document.querySelector('.user-name') && !!document.querySelector('.start-session')",
+          `!!document.querySelector('.user-name') && !!document.querySelector(${JSON.stringify(startSelector)})`,
         )
       )
         break;
@@ -165,71 +174,141 @@ try {
     );
   }
   await evaluate(
-    "window.__visibilityEvents=[]; document.addEventListener('visibilitychange',()=>window.__visibilityEvents.push(document.visibilityState)); document.querySelector('.start-session').click(); true",
+    `window.__visibilityEvents=[]; document.addEventListener('visibilitychange',()=>window.__visibilityEvents.push(document.visibilityState)); document.querySelector(${JSON.stringify(startSelector)}).click(); true`,
   );
   for (let i = 0; i < 50; i++) {
-    if (await evaluate("!!document.querySelector('.play-page')")) break;
+    if (
+      await evaluate(
+        `!!document.querySelector(${JSON.stringify(playSelector)})`,
+      )
+    )
+      break;
     await delay(100);
   }
-  assert.equal(await evaluate("!!document.querySelector('.play-page')"), true);
-  if (corsi) {
-    const expectedText = corsiPhase === "presenting" ? "请记忆" : "复现";
-    let ready = false;
-    for (let i = 0; i < 100; i++) {
-      if (
-        await evaluate(
-          `document.querySelector('[data-testid="corsi-phase"]')?.textContent.includes(${JSON.stringify(expectedText)}) ?? false`,
-        )
-      ) {
-        ready = true;
-        break;
-      }
-      await delay(30);
-    }
-    assert.equal(
-      ready,
-      true,
-      `Corsi did not reach the requested foreground phase: ${JSON.stringify(await evaluate("({phase:document.querySelector('[data-testid=corsi-phase]')?.textContent,warning:document.querySelector('.warning')?.textContent,visibility:document.visibilityState,events:window.__visibilityEvents})"))}`,
-    );
-    if (corsiPhase === "feedback") {
-      await evaluate(
-        "Array.from(document.querySelectorAll('button')).find(x=>x.textContent==='记不住了').click(); true",
+  assert.equal(
+    await evaluate(`!!document.querySelector(${JSON.stringify(playSelector)})`),
+    true,
+  );
+  if (stroop) {
+    const phase = process.env.VISIBILITY_STROOP_PHASE ?? "question";
+    const clickAnswer = async () => {
+      const clicked = await evaluate(
+        `(()=>{const word=document.querySelector('[data-testid="stroop-word"]');if(!word)return false;const color=getComputedStyle(word).color;const names={'rgb(255, 139, 148)':'红','rgb(118, 188, 255)':'蓝','rgb(104, 217, 173)':'绿','rgb(246, 214, 93)':'黄'};const button=Array.from(document.querySelectorAll('.stroop-answers button')).find(x=>x.textContent===names[color]);if(!button||button.getAttribute('aria-disabled')==='true')return false;button.click();return true;})()`,
       );
+      return clicked;
+    };
+    const answers = phase === "complete" ? 40 : phase === "feedback" ? 1 : 0;
+    for (let index = 0; index < answers; index++) {
+      let answered = false;
+      for (let attempt = 0; attempt < 200; attempt++) {
+        if (await clickAnswer()) {
+          answered = true;
+          break;
+        }
+        await delay(10);
+      }
+      assert.equal(answered, true, "Stroop did not deliver a live question");
+    }
+    if (answers)
       assert.equal(
         await evaluate(
-          "!!document.querySelector('[data-testid=corsi-feedback]')",
+          "!!document.querySelector('[data-testid=stroop-feedback]')",
         ),
         true,
       );
-    }
+    await send("Target.activateTarget", { targetId: other.targetId });
+    await delay(200);
     assert.equal(
-      await evaluate("!!document.querySelector('.corsi-aborted')"),
+      await evaluate("window.__visibilityEvents.includes('hidden')"),
+      true,
+    );
+    if (phase === "complete") {
+      assert.equal(
+        await evaluate(
+          "!!document.querySelector('[data-testid=stroop-result]')",
+        ),
+        true,
+      );
+      assert.equal(
+        await evaluate(
+          "!!document.querySelector('[data-testid=stroop-abort]')",
+        ),
+        false,
+      );
+      assert.equal(uploads, 1);
+    } else {
+      assert.equal(
+        await evaluate(
+          "!!document.querySelector('[data-testid=stroop-abort]')",
+        ),
+        true,
+      );
+      assert.equal(uploads, 0);
+    }
+    console.log(
+      `PASS: native Stroop ${phase} -> hidden, ${phase === "complete" ? "complete result retained with one upload" : "aborted without upload"}`,
+    );
+    await send("Browser.close").catch(() => {});
+  } else {
+    if (corsi) {
+      const expectedText = corsiPhase === "presenting" ? "请记忆" : "复现";
+      let ready = false;
+      for (let i = 0; i < 100; i++) {
+        if (
+          await evaluate(
+            `document.querySelector('[data-testid="corsi-phase"]')?.textContent.includes(${JSON.stringify(expectedText)}) ?? false`,
+          )
+        ) {
+          ready = true;
+          break;
+        }
+        await delay(30);
+      }
+      assert.equal(
+        ready,
+        true,
+        `Corsi did not reach the requested foreground phase: ${JSON.stringify(await evaluate("({phase:document.querySelector('[data-testid=corsi-phase]')?.textContent,warning:document.querySelector('.warning')?.textContent,visibility:document.visibilityState,events:window.__visibilityEvents})"))}`,
+      );
+      if (corsiPhase === "feedback") {
+        await evaluate(
+          "Array.from(document.querySelectorAll('button')).find(x=>x.textContent==='记不住了').click(); true",
+        );
+        assert.equal(
+          await evaluate(
+            "!!document.querySelector('[data-testid=corsi-feedback]')",
+          ),
+          true,
+        );
+      }
+      assert.equal(
+        await evaluate("!!document.querySelector('.corsi-aborted')"),
+        false,
+      );
+    }
+    await send("Target.activateTarget", { targetId: other.targetId });
+    let result;
+    for (let i = 0; i < 50; i++) {
+      result = await evaluate(
+        "({events:window.__visibilityEvents,warning:document.querySelector('.warning')?.textContent,phase:document.visibilityState})",
+      );
+      if (result.warning) break;
+      await delay(100);
+    }
+    assert.ok(
+      result.events.includes("hidden"),
+      "Browser did not send a native hidden event",
+    );
+    assert.match(result.warning, corsi ? /本局未计入/ : /本局已结束/);
+    assert.equal(
+      await evaluate("!!document.querySelector('.save-message')"),
       false,
     );
-  }
-  await send("Target.activateTarget", { targetId: other.targetId });
-  let result;
-  for (let i = 0; i < 50; i++) {
-    result = await evaluate(
-      "({events:window.__visibilityEvents,warning:document.querySelector('.warning')?.textContent,phase:document.visibilityState})",
+    assert.equal(uploads, 0);
+    console.log(
+      "PASS: native Chromium tab visibilitychange -> interrupted game, no saved result",
     );
-    if (result.warning) break;
-    await delay(100);
+    await send("Browser.close").catch(() => {});
   }
-  assert.ok(
-    result.events.includes("hidden"),
-    "Browser did not send a native hidden event",
-  );
-  assert.match(result.warning, corsi ? /本局未计入/ : /本局已结束/);
-  assert.equal(
-    await evaluate("!!document.querySelector('.save-message')"),
-    false,
-  );
-  assert.equal(uploads, 0);
-  console.log(
-    "PASS: native Chromium tab visibilitychange -> interrupted game, no saved result",
-  );
-  await send("Browser.close").catch(() => {});
 } finally {
   socket?.close();
   if (child.exitCode === null) child.kill();

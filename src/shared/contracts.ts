@@ -56,7 +56,12 @@ export const CORSI_FORWARD = "corsi-forward" as const;
 export const CORSI_BACKWARD = "corsi-backward" as const;
 export const CORSI_GAME_IDS = [CORSI_FORWARD, CORSI_BACKWARD] as const;
 export type CorsiGameId = (typeof CORSI_GAME_IDS)[number];
-export const GAME_IDS = [...NBACK_GAME_IDS, ...CORSI_GAME_IDS] as const;
+export const STROOP_GAME = "stroop" as const;
+export const GAME_IDS = [
+  ...NBACK_GAME_IDS,
+  ...CORSI_GAME_IDS,
+  STROOP_GAME,
+] as const;
 export type GameId = (typeof GAME_IDS)[number];
 export type Dimension = "position" | "color" | "number";
 export const DIMENSION_NAMES: Record<Dimension, string> = {
@@ -75,13 +80,14 @@ export const GAME_NAMES: Record<GameId, string> = {
   [TRIPLE_GAME]: "位置＋颜色＋数字 N-back",
   [CORSI_FORWARD]: "顺序记忆 · 正序",
   [CORSI_BACKWARD]: "顺序记忆 · 倒序",
+  [STROOP_GAME]: "颜色干扰 · Stroop",
 };
 export const isNBackGameId = (value: unknown): value is NBackGameId =>
   value === GAME || value === COLOR_GAME || value === TRIPLE_GAME;
 export const isCorsiGameId = (value: unknown): value is CorsiGameId =>
   value === CORSI_FORWARD || value === CORSI_BACKWARD;
 export const isGameId = (value: unknown): value is GameId =>
-  isNBackGameId(value) || isCorsiGameId(value);
+  isNBackGameId(value) || isCorsiGameId(value) || value === STROOP_GAME;
 export const VERSION = 1 as const;
 
 export interface CorsiSummary {
@@ -121,6 +127,37 @@ export interface CorsiProgress {
   serverNow: number;
   items: CorsiProgressItem[];
 }
-export type AnyResultInput = ResultInput | CorsiResultInput;
-export type AnySavedResult = SavedResult | CorsiSavedResult;
-export type AnyHistory = History | CorsiHistory;
+export type StroopColor = 0 | 1 | 2 | 3;
+export interface StroopCounts {
+  correct: number;
+  wrong: number;
+  timeout: number;
+  correctRtTotalMs: number;
+}
+export interface StroopSummary {
+  congruent: StroopCounts;
+  incongruent: StroopCounts;
+}
+export interface StroopMetrics {
+  score: number;
+  meanCorrectRtMs: number | null;
+  interferenceMs: number | null;
+}
+export interface StroopResultInput extends StroopSummary {
+  resultId: string;
+  startedByUserId: string;
+  game: typeof STROOP_GAME;
+  version: 1;
+  completedAt: string;
+}
+export type StroopSavedResult = StroopResultInput &
+  StroopMetrics & { receivedAt: string };
+export interface StroopHistory {
+  items: StroopSavedResult[];
+  page: number;
+  total: number;
+  pageSize: number;
+}
+export type AnyResultInput = ResultInput | CorsiResultInput | StroopResultInput;
+export type AnySavedResult = SavedResult | CorsiSavedResult | StroopSavedResult;
+export type AnyHistory = History | CorsiHistory | StroopHistory;

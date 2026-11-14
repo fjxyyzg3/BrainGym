@@ -48,15 +48,26 @@
 - [x] 验证既有 N-back、Corsi 不回归；隔离临时 SQLite 测试升级、旧程序忽略附加表、再次升级和指纹差异拒绝。
 - [x] 原生 Chromium CDP 验证隐藏期间未完成局作废、末题已冻结结果保留；锁屏无法自动控制时如实记录实际覆盖，不宣称已做真实硬件锁屏。
 
-### Task 4: 必需验证、安全审查与代码 Git finalize（in_progress）
+### Task 4: 必需验证、安全审查与代码 Git finalize（completed）
 
 - [x] 顺序执行 typecheck、build、Node 测试、根路径 E2E；随后设置 `E2E_BASE_PATH=/braingym/` 测同一构建并清除环境变量。失败先定位测试／实现／环境原因，不削弱验收。
 - [x] 检查 status、stat、全部 diff 和文件列表；按认证／会话、数据访问、浏览器暴露、部署、凭据文档、依赖及测试输出中文 Findings、Verification、Residual Risk；扫描新增内容敏感数据和打包输入。
-- [ ] 更新计划及逐项验收证据；git-workflow checkpoint 提交已验证代码。finalize 刷新／rebase、push 验 SHA，干净 main 自动合入再 push，按偏好清理任务分支／worktree；不创建 PR。
+- [x] 更新计划及逐项验收证据；git-workflow checkpoint 提交已验证代码。finalize 刷新／rebase、push 验 SHA，干净 main 自动合入再 push，按偏好清理任务分支／worktree；不创建 PR。
 
-### Task 5: 稳定 main 演练与正式发布
+### Task 5: 稳定 main 演练与正式发布（发布验收已完成）
 
-- [ ] 从主工作区稳定 main 重新建立 Git 上下文，执行 `npm run rehearse`，记录候选绑定的源码及双路径、Vite、真实隔离 Hub 验证。
-- [ ] `npm run release -- deploy --candidate <实际候选目录>`，不改变 Hub 定义和网络边界；按现有工具备份完整数据库目录，失败恢复程序／运行状态，不回滚数据库。
-- [ ] 核对 release status、Monitor／Forwarding、真实 HTTPS 页面及资源、匿名私人接口拒绝和既有数据指纹；正式库只读，不创建测试账号。
-- [ ] 记录并提交正式验收文档，git-workflow finalize；只有必需证据完整时报告整体完成，否则明确实际阻塞与已完成部分。
+- [x] 从主工作区稳定 main 重新建立 Git 上下文，执行 `npm run rehearse`，记录候选绑定的源码及双路径、Vite、真实隔离 Hub 验证。
+- [x] `npm run release -- deploy --candidate <实际候选目录>`，不改变 Hub 定义和网络边界；按现有工具备份完整数据库目录，失败恢复程序／运行状态，不回滚数据库。
+- [x] 核对 release status、Monitor／Forwarding、真实 HTTPS 页面及资源、匿名私人接口拒绝和既有数据指纹；正式库只读，不创建测试账号。
+- [x] 记录正式验收文档，区分已完成验证、已知风险及未覆盖项。
+
+文档 Git 收尾随本次验收记录的交付执行：复核通过后提交并执行 git-workflow finalize，实际结果以 Git 历史及最终交付说明为准。只有必需证据与 Git 收尾均完成后报告整体完成，否则明确阻塞与已完成部分。
+
+## 执行证据
+
+- spec 批准提交：f12607f；计划提交：38944d7；功能及代码验收提交：2e4ae45。
+- API 与大厅入口均保留真实 RED 失败记录，规则／引擎／服务端专项 GREEN；最终顺序通过类型、构建、121 项 Node 和根／前缀各 71 项浏览器测试。
+- 原生 CDP 三项通过；DOM 计时边界及本次未覆盖的真实硬件锁屏等限制见验收记录。
+- 代码阶段已推送并合入 main、核对远端 SHA，feat-stroop 工作区及本地／远端分支均已清理。证据保存在稳定主工作区忽略目录。
+- 正式阶段已从稳定 main 重新 prepare；候选演练、正式 deploy 及线上匿名 Stroop 验收均通过，状态为 `published / verified`。Hub 定义未变、未 Reload，完整备份及既有数据保留已核验。
+- 真实 HTTPS 下按真实时钟完成热身 8 题和游客 40 题，API 写请求尝试、页面异常及资源失败均为 0；详细结果、已知加固缺口和硬件验证限制见[验收记录](../../verification/stroop.md)。

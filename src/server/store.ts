@@ -5,16 +5,26 @@ import { dirname } from "node:path";
 import {
   GAME,
   TRIPLE_GAME,
-  isGameId,
+  isNBackGameId,
+  isCorsiGameId,
   VERSION,
   type User,
   type ResultInput,
   type SavedResult,
   type History,
   type GameId,
+  type NBackGameId,
+  type CorsiGameId,
+  type CorsiResultInput,
+  type CorsiSavedResult,
+  type CorsiHistory,
+  type AnyResultInput,
+  type AnySavedResult,
+  type AnyHistory,
 } from "../shared/contracts.js";
 import { assertLevel, validateCounts, scoreResult } from "../shared/rules.js";
 import { AppError } from "./errors.js";
+import { CorsiRepository, parseCorsiResult } from "./corsi-store.js";
 
 const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
@@ -25,9 +35,11 @@ const toResult = (row: ResultRow): SavedResult => ({
   score: row.score,
   receivedAt: row.received_at,
 });
-export function parseResult(value: unknown): ResultInput {
+export function parseResult(value: unknown): AnyResultInput {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new AppError(400, "INVALID_RESULT", "无效的对局数据");
+  if (isCorsiGameId((value as { game?: unknown }).game))
+    return parseCorsiResult(value);
   const p = value as ResultInput;
   const id = /^[a-f0-9-]{36}$/i;
   if (
@@ -35,7 +47,7 @@ export function parseResult(value: unknown): ResultInput {
     !id.test(p.resultId) ||
     typeof p.startedByUserId !== "string" ||
     !id.test(p.startedByUserId) ||
-    !isGameId(p.game) ||
+    !isNBackGameId(p.game) ||
     p.version !== VERSION
   )
     throw new AppError(400, "INVALID_RESULT", "对局标识或规则无效");
@@ -94,6 +106,7 @@ export function parseResult(value: unknown): ResultInput {
 }
 export class Store {
   private db: DatabaseSync;
+  private corsi: CorsiRepository;
   private closed = false;
   private busyTimeout: number;
   constructor(path: string, options: { busyTimeoutMs?: number } = {}) {
@@ -124,6 +137,12 @@ export class Store {
       CREATE INDEX IF NOT EXISTS results_history ON results(user_id,completed_at DESC,received_at DESC,result_id);
       CREATE INDEX IF NOT EXISTS results_best ON results(user_id,game,version,n,score DESC);
       PRAGMA user_version=1; COMMIT;`);
+    try {
+      this.corsi = new CorsiRepository(this.db);
+    } catch (error) {
+      this.db.close();
+      throw error;
+    }
   }
   private transaction<T>(fn: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");
@@ -224,7 +243,10 @@ export class Store {
         .prepare("DELETE FROM sessions WHERE token_hash=?")
         .run(digest(session));
   }
-  save(user: User, payload: ResultInput, now: number): SavedResult {
+  save(user: User, payload: ResultInput, now: number): SavedResult;
+  save(user: User, payload: CorsiResultInput, now: number): CorsiSavedResult;
+  save(user: User, payload: AnyResultInput, now: number): AnySavedResult;
+  save(user: User, payload: AnyResultInput, now: number): AnySavedResult {
     if (payload.startedByUserId !== user.id)
       throw new AppError(
         409,
@@ -238,6 +260,16 @@ export class Store {
         )
         .get(user.id, payload.resultId) as unknown as ResultRow | undefined;
       const serialized = JSON.stringify(payload);
+      const corsi = this.corsi.find(user.id, payload.resultId);
+      if (corsi) {
+        if (corsi.serialized !== serialized)
+          throw new AppError(
+            409,
+            "RESULT_CONFLICT",
+            "该对局已有不同的保存内容",
+          );
+        return corsi.result;
+      }
       if (row) {
         if (row.payload !== serialized)
           throw new AppError(
@@ -247,8 +279,11 @@ export class Store {
           );
         return toResult(row);
       }
+      if (isCorsiGameId(payload.game))
+        return this.corsi.saveNew(user.id, payload as CorsiResultInput, now);
+      const nback = payload as ResultInput;
       const receivedAt = new Date(now).toISOString();
-      const computed = scoreResult(payload);
+      const computed = scoreResult(nback);
       this.db
         .prepare("INSERT INTO results VALUES(?,?,?,?,?,?,?,?,?)")
         .run(
@@ -256,16 +291,20 @@ export class Store {
           payload.resultId,
           payload.game,
           payload.version,
-          payload.n,
+          nback.n,
           serialized,
           computed,
           payload.completedAt,
           receivedAt,
         );
-      return { ...payload, score: computed, receivedAt };
+      return { ...nback, score: computed, receivedAt };
     });
   }
-  history(userId: string, page: number, game: GameId = GAME): History {
+  history(userId: string, page: number, game?: NBackGameId): History;
+  history(userId: string, page: number, game: CorsiGameId): CorsiHistory;
+  history(userId: string, page: number, game: GameId): AnyHistory;
+  history(userId: string, page: number, game: GameId = GAME): AnyHistory {
+    if (isCorsiGameId(game)) return this.corsi.history(userId, page, game);
     const total = this.db
       .prepare(
         "SELECT count(*) AS count FROM results WHERE user_id=? AND game=? AND version=?",
@@ -278,7 +317,11 @@ export class Store {
       .all(userId, game, VERSION, (page - 1) * 20) as unknown as ResultRow[];
     return { items: rows.map(toResult), total, page, pageSize: 20 };
   }
-  bests(userId: string, game: GameId = GAME): SavedResult[] {
+  bests(userId: string, game?: NBackGameId): SavedResult[];
+  bests(userId: string, game: CorsiGameId): CorsiSavedResult[];
+  bests(userId: string, game: GameId): AnySavedResult[];
+  bests(userId: string, game: GameId = GAME): AnySavedResult[] {
+    if (isCorsiGameId(game)) return this.corsi.bests(userId, game);
     return (
       this.db
         .prepare(
@@ -296,6 +339,41 @@ export class Store {
     } finally {
       this.db.exec(`PRAGMA busy_timeout=${this.busyTimeout}`);
     }
+  }
+  corsiProgress(user: User, now: number) {
+    return { user, serverNow: now, items: this.corsi.progress(user.id) };
+  }
+  resetCorsiProgress(user: User, value: unknown, now: number) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw new AppError(400, "INVALID_PROGRESS", "恢复请求无效");
+    const p = value as {
+      game: unknown;
+      expectedEpoch: unknown;
+      expectedUserId: unknown;
+    };
+    if (
+      !isCorsiGameId(p.game) ||
+      !Number.isSafeInteger(p.expectedEpoch) ||
+      (p.expectedEpoch as number) < 0 ||
+      typeof p.expectedUserId !== "string" ||
+      !/^[a-f0-9-]{36}$/i.test(p.expectedUserId)
+    )
+      throw new AppError(400, "INVALID_PROGRESS", "恢复请求无效");
+    if (p.expectedUserId !== user.id)
+      throw new AppError(
+        409,
+        "IDENTITY_CONFLICT",
+        "当前账户已变化，请重新确认恢复",
+      );
+    return this.transaction(() => {
+      this.corsi.reset(
+        user.id,
+        p.game as CorsiGameId,
+        p.expectedEpoch as number,
+        now,
+      );
+      return this.corsiProgress(user, now);
+    });
   }
   close(): void {
     if (!this.closed) {

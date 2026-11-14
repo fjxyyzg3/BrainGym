@@ -32,6 +32,10 @@ npm run dev
 
 `npm run web` 不注册生产 worker。若曾在同一 Origin 运行生产版，使用独立开发端口或按上述方法只移除对应 worker。图标由已提交的 PNG 提供，修改原有标识后可设置 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` 并运行 `node scripts/generate-pwa-icons.mjs`，从 `public/favicon.svg` 重新生成。
 
+## 恢复 Corsi 起点
+
+Corsi 起点异常或设备无法准备超长序列时，在对应方向准备页选择**从 2 格重新开始**并确认。历史和最佳保留，另一方向不受影响；账号恢复会同步到其他设备，游客只修改当前页面内存。恢复响应丢失时先重新读取起点，重新确认前不要反复提交恢复。完整进度与异常语义见 [Corsi Wiki](corsi.md#进度恢复与异常处理)。
+
 ## Docker 运行
 
 ```powershell
@@ -120,5 +124,7 @@ npm run release -- status
 线上使用 HTTPS 反向代理时，将 `APP_ORIGIN` 设置为浏览器实际访问的 HTTPS origin，且无路径和尾斜杠，同时设置 `COOKIE_SECURE=true`。来源不一致的写请求会被拒绝；本地 HTTP 使用 `false`。Compose 仍自动读取其 `.env`。普通 Node 直接运行时按 `BRAINGYM_ENV` 或已有 production/test 标记选择环境，正式与测试必须显式提供 `DATABASE_PATH`；普通 npm 入口固定使用开发配置。
 
 备份前停止 API 及所有管理进程，再复制完整数据库目录；恢复到原路径后重新启动。不要只复制正在写入的 SQLite 主文件，WAL 可能仍包含已提交数据。旧版应用不能直接打开更高版本数据库，当前 schema version 为 1。
+
+Corsi 以 `corsi_results` 和 `corsi_progress_resets` 两张附加表扩展 schema 1，首次打开新程序时原子初始化，重复打开不会重置进度。发布指纹同时保护附加表存在性和既有行；程序回退保留两表及其数据，不手动删除恢复世代表或通过回滚数据库撤销起点。升级、旧程序重新打开与再次升级使用隔离库验证，正式库仅做只读保留核验。
 
 来源：[README](../../README.md)、[环境隔离 spec](../scope/2026-11-13-dev-production-isolation.md)、[环境解析](../../src/server/environment.ts)、[发布入口](../../scripts/release.ts)、[发布状态机](../../scripts/release/deploy.ts)、[文件保护](../../scripts/release-windows.ps1)、[Compose](../../compose.yaml)、[存储](../../src/server/store.ts)。本次真实迁移及验证范围见[环境隔离验收](../verification/dev-production-isolation.md)，历史接入结果见 [WheelMaker 验收记录](../verification/wheelmaker-integration.md)。

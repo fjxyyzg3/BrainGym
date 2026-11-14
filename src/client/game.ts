@@ -3,12 +3,12 @@ import {
   COLOR_GAME,
   TRIPLE_GAME,
   GAME_DIMENSIONS,
-  isGameId,
+  isNBackGameId,
   type Counts,
   type DualCounts,
   type TripleCounts,
   type Dimension,
-  type GameId,
+  type NBackGameId,
 } from "../shared/contracts.js";
 import {
   assertLevel,
@@ -19,7 +19,7 @@ import {
   type TripleStimulus,
 } from "../shared/rules.js";
 export type { Dimension } from "../shared/contracts.js";
-type GameResult<G extends GameId> = G extends typeof GAME
+type GameResult<G extends NBackGameId> = G extends typeof GAME
   ? Counts
   : G extends typeof COLOR_GAME
     ? DualCounts
@@ -35,7 +35,7 @@ export interface GameSnapshot {
   colorAnswered: boolean;
   numberAnswered: boolean;
 }
-export class NBackGame<G extends GameId = typeof GAME> {
+export class NBackGame<G extends NBackGameId = typeof GAME> {
   private answers = {
     position: new Set<number>(),
     color: new Set<number>(),
@@ -62,7 +62,7 @@ export class NBackGame<G extends GameId = typeof GAME> {
     assertLevel(n);
     if (
       sequence.length !== n + TRIALS ||
-      !isGameId(game) ||
+      !isNBackGameId(game) ||
       sequence.some((x) => {
         const cell = typeof x === "number" ? x : x?.cell;
         const color = typeof x === "number" ? null : x?.color;

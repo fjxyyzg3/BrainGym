@@ -8,6 +8,72 @@ import { normalizeBasePath } from "../../src/shared/paths.js";
 import { releaseServer } from "./pwa-server";
 
 const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);
+for (const route of ["corsi", "corsi-backward"])
+  test(`PWA ${route} offline guest finishes and resets without uploading`, async ({
+    page,
+    context,
+  }) => {
+    await prime(page);
+    await page.close();
+    await context.setOffline(true);
+    const offline = await context.newPage();
+    let uploads = 0;
+    offline.on("request", (r) => {
+      if (r.method() === "POST" && r.url().endsWith("/api/results")) uploads++;
+    });
+    await offline.goto(`${basePath}#${route}`);
+    await expect(
+      offline.getByRole("heading", {
+        name: "顺序记忆 · Corsi 方块",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await offline.clock.install();
+    await offline.clock.pauseAt(new Date(Date.now() + 1000));
+    await offline
+      .getByRole("button", { name: "以游客身份练习", exact: true })
+      .click();
+    for (let trial = 0; trial < 2; trial++) {
+      for (let step = 0; step < 150; step++) {
+        if (
+          await offline
+            .getByRole("button", { name: "记不住了", exact: true })
+            .count()
+        )
+          break;
+        await offline.clock.runFor(20);
+      }
+      await offline
+        .getByRole("button", { name: "记不住了", exact: true })
+        .click();
+      if (trial === 0)
+        await offline
+          .getByRole("button", { name: "下一题", exact: true })
+          .click();
+    }
+    await expect(offline.getByTestId("corsi-score")).toContainText(
+      "未通过起始 2 格",
+    );
+    await context.setOffline(false);
+    await offline.bringToFront();
+    expect(uploads).toBe(0);
+    expect(await offline.evaluate(() => localStorage.length)).toBe(0);
+    expect(await offline.evaluate(() => indexedDB.databases())).toEqual([]);
+    const cached = await offline.evaluate(async () => {
+      const urls: string[] = [];
+      for (const name of await caches.keys()) {
+        const cache = await caches.open(name);
+        urls.push(...(await cache.keys()).map((x) => x.url));
+      }
+      return urls;
+    });
+    expect(cached.every((url) => !url.includes("/api/"))).toBe(true);
+    await context.setOffline(true);
+    await offline.reload();
+    await expect(offline.getByTestId("corsi-current-start")).toContainText(
+      "2 格",
+    );
+  });
 for (const [route, title, channels] of [
   ["color-n-back", "位置＋颜色 N-back", ["position", "color"]],
   ["triple-n-back", "位置＋颜色＋数字 N-back", ["position", "color", "number"]],

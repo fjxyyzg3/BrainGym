@@ -1282,3 +1282,146 @@ tr:last-child td {
     scroll-behavior: auto !important;
   }
 }
+
+/* Corsi uses the existing palette and cards, with a separate input board. */
+.corsi-setup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.corsi-rules,
+.corsi-options,
+.corsi-aborted {
+  padding: 28px;
+}
+.corsi-rules h2,
+.corsi-options h2 {
+  font-size: 1.125rem;
+  margin: 0 0 20px;
+}
+.corsi-rules ol {
+  padding-left: 1.5em;
+}
+.corsi-rules li {
+  margin-block: 12px;
+}
+.corsi-rules p {
+  color: var(--muted);
+  margin-block: 16px;
+}
+.corsi-direction-overview {
+  border-block: 1px solid var(--line);
+  margin-block: 20px;
+  padding-block: 12px;
+}
+.corsi-direction-overview p {
+  margin-block: 12px;
+  overflow-wrap: anywhere;
+}
+.corsi-direction-overview span {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.corsi-guest-start {
+  width: 100%;
+  margin-block: 12px;
+}
+.corsi-options [data-testid="corsi-current-start"] {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.corsi-cell {
+  color: var(--muted);
+  font-size: 1.25rem;
+  font-weight: 600;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding: 0;
+  touch-action: manipulation;
+}
+.corsi-cell:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.corsi-cell.lit,
+.corsi-cell.pressed {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.corsi-cell:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+.corsi-feedback {
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.corsi-feedback h2 {
+  font-size: 1.25rem;
+}
+.corsi-feedback p {
+  color: var(--muted);
+  margin-block: 12px 20px;
+}
+.corsi-score {
+  display: block;
+  font-size: clamp(1.5rem, 5vw, 3rem);
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+.corsi-result .result-card p {
+  margin-block: 16px;
+}
+.corsi-best {
+  margin-bottom: 24px;
+}
+.corsi-best strong {
+  overflow-wrap: anywhere;
+}
+.corsi-time-warning {
+  display: block;
+  color: var(--warning);
+}
+.corsi-reset-dialog {
+  width: min(480px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px;
+  color: var(--ink);
+  background: var(--paper);
+}
+.corsi-reset-dialog h2 {
+  font-size: 1.25rem;
+  margin-top: 0;
+}
+.corsi-reset-dialog p {
+  margin-block: 16px 24px;
+  color: var(--muted);
+}
+.corsi-reset-dialog:modal {
+  overscroll-behavior: contain;
+}
+.corsi-reset-dialog::backdrop {
+  background: #171d2b66;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.corsi-actions {
+  display: flex;
+  justify-content: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+@media (max-width: 720px) {
+  .corsi-setup-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .corsi-rules,
+  .corsi-options {
+    padding: 20px;
+  }
+}

@@ -1,26 +1,29 @@
-> 摘要：BrainGym 的环境与发布边界、模块、三种模式成绩合同、双路径运行、PWA 缓存、WheelMaker 生命周期及会话信任边界。
+> 摘要：BrainGym 的环境与发布边界、模块、N-back／Corsi 成绩合同、双路径运行、PWA 缓存、WheelMaker 生命周期及会话信任边界。
 
 # 架构与数据边界
 
 BrainGym 使用 React 和 Vite 构建浏览器界面，Fastify 在生产环境同时提供页面和同源 API。SQLite 文件保存用户、凭据摘要、会话和对局汇总，无需独立数据库服务。
 
-| 模块                                             | 职责                                                    |
-| ------------------------------------------------ | ------------------------------------------------------- |
-| `src/client/App.tsx`                             | 合集入口、训练、结果、登录与个人记录页面                |
-| `src/client/game.ts`                             | 按单调时间推进的内存对局，输入去重与作废                |
-| `src/shared/rules.ts`                            | 随机出题、汇总校验与平衡准确率                          |
-| `src/shared/contracts.ts`                        | 前后端共享的数据类型、游戏标识和规则版本                |
-| `src/server/app.ts`                              | Cookie 鉴权、来源校验、API、静态页面                    |
-| `src/server/store.ts`                            | SQLite 初始化、事务、凭据与数据访问                     |
-| `src/server/cli.ts`                              | 用户创建与 Token 发放、换发和吊销                       |
-| `src/server/config.ts`                           | 运行环境校验、路径和托管配置                            |
-| `src/server/environment.ts`                      | 开发、正式、测试选择及独立数据库路径校验                |
-| `scripts/release/`                               | Git 候选、验收证据、单应用控制、全局 Reload 保护及恢复  |
-| `src/server/main.ts`                             | Node 根进程的启动、健康检查和有界关闭                   |
-| `src/server/managed.ts`、`json-lines.ts`         | Monitor 控制协议、身份回显、健康事件及有界 UTF-8 帧解析 |
-| `src/server/forwarding.ts`                       | 持续 IPC 注册、最新发布状态及断线重连                   |
-| `src/server/client-ip.ts`                        | 登录限流所用客户端 IP 的校验和规范化                    |
-| `src/shared/paths.ts`、`src/client/base-path.ts` | 服务端基础路径校验和浏览器运行时路径读取                |
+| 模块                                                                | 职责                                                    |
+| ------------------------------------------------------------------- | ------------------------------------------------------- |
+| `src/client/App.tsx`                                                | 合集入口、训练、结果、登录与个人记录页面                |
+| `src/client/game.ts`                                                | 按单调时间推进的内存对局，输入去重与作废                |
+| `src/client/corsi-game.ts`、`CorsiTraining.tsx`、`CorsiRecords.tsx` | Corsi 独立状态机、相位回执、训练与私人记录              |
+| `src/shared/rules.ts`                                               | 随机出题、汇总校验与平衡准确率                          |
+| `src/shared/corsi.ts`                                               | Corsi 序列、摘要、长度成绩、起点与时间规则              |
+| `src/shared/contracts.ts`                                           | 前后端共享的数据类型、游戏标识和规则版本                |
+| `src/server/app.ts`                                                 | Cookie 鉴权、来源校验、API、静态页面                    |
+| `src/server/store.ts`                                               | SQLite 初始化、事务、凭据与数据访问                     |
+| `src/server/corsi-store.ts`                                         | Corsi 附加表、成绩／进度查询及世代恢复                  |
+| `src/server/cli.ts`                                                 | 用户创建与 Token 发放、换发和吊销                       |
+| `src/server/config.ts`                                              | 运行环境校验、路径和托管配置                            |
+| `src/server/environment.ts`                                         | 开发、正式、测试选择及独立数据库路径校验                |
+| `scripts/release/`                                                  | Git 候选、验收证据、单应用控制、全局 Reload 保护及恢复  |
+| `src/server/main.ts`                                                | Node 根进程的启动、健康检查和有界关闭                   |
+| `src/server/managed.ts`、`json-lines.ts`                            | Monitor 控制协议、身份回显、健康事件及有界 UTF-8 帧解析 |
+| `src/server/forwarding.ts`                                          | 持续 IPC 注册、最新发布状态及断线重连                   |
+| `src/server/client-ip.ts`                                           | 登录限流所用客户端 IP 的校验和规范化                    |
+| `src/shared/paths.ts`、`src/client/base-path.ts`                    | 服务端基础路径校验和浏览器运行时路径读取                |
 
 ## 开发、数据与发布边界
 
@@ -88,5 +91,13 @@ React 将网络故障与 401/身份冲突分开处理。普通开局重新请求
 成绩保存按 `(user_id, result_id)` 唯一约束，在事务中比较规范化的结果内容。相同请求返回原记录，修改任一路统计或更换游戏标识等不同内容返回 409；分数由服务端按模式复算。原两种请求的规范化字段顺序保持不变，三路请求按位置、颜色、数字顺序规范化，各路均固定为 `tp/fn/fp/tn`，避免仅因请求键顺序变化而引发重试冲突。客户端完成时间 `completedAt` 与服务端首次落库时间 `receivedAt` 分开保存，重试不改写。历史按完成时间倒序稳定分页，每页 20 条；最佳按游戏、规则版本、N 值分组并使用未舍入分数。
 
 浏览器负责出题和统计，服务端不验证实际游玩过程。数据库不保存题目序列或逐步操作日志，客户端不建立持久化离线队列。游客结果留在当前页面，不能在登录后补传。
+
+### Corsi 独立合同
+
+`corsi-forward`、`corsi-backward` 使用独立 `CorsiGame`，不进入 N-back 的维度、1～5-back 范围或百分制计算。公共 `GameId` 覆盖五种标识，`NBackGameId` 只覆盖三种 N-back；原 `ResultInput`、`SavedResult`、`History` 保持 N-back 类型兼容，公共分派使用 `AnyResultInput`、`AnySavedResult`、`AnyHistory`。
+
+服务端追加 `corsi_results`、`corsi_progress_resets` 及索引，核心 schema 仍为 1，旧程序可忽略附加表。保存事务跨两张成绩表检查同用户 result ID；原三种 N-back 请求的规范化字段顺序保持不变。发布指纹兼容无附加表的旧库，并在附加表存在时保护其存在性和既有行，包括恢复世代。程序回退不删除附加表、不回滚数据库。
+
+`corsi/progress` 以有效会话返回两个方向的当前世代、起点、最佳及服务端时间锚点；`corsi/progress/reset` 按预期身份与世代比较并递增。旧世代结果保留历史和最佳，不参与当前起点。Corsi 完成时间由开局服务端时间加客户端单调经过时间生成，首次保存的未来容差为 5000 ms；历史异常时间记录永久排除在起点推导外，不改变 N-back 时间语义。规则和字段详见 [Corsi Wiki](corsi.md)。
 
 来源：[接入 spec](../scope/2026-11-12-wheelmaker-integration.md)、[API](../../src/server/app.ts)、[运行入口](../../src/server/main.ts)、[托管协议](../../src/server/managed.ts)、[Forwarding](../../src/server/forwarding.ts)、[客户端地址](../../src/server/client-ip.ts)、[存储](../../src/server/store.ts)、[游戏引擎](../../src/client/game.ts)、[规则](n-back.md)、[运维](operations.md)。SQLite 使用 Node 内置模块，其 API 参考为 [Node.js SQLite 文档](https://nodejs.org/api/sqlite.html)。

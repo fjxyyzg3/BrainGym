@@ -7,6 +7,8 @@ import {
   type FormEvent,
 } from "react";
 import { api, ApiError } from "./api";
+import { CorsiTraining } from "./CorsiTraining";
+import { CorsiRecords } from "./CorsiRecords";
 import { NBackGame, type GameSnapshot, type Dimension } from "./game";
 import {
   generateSequence,
@@ -23,6 +25,10 @@ import {
   COLOR_GAME,
   TRIPLE_GAME,
   GAME_IDS,
+  NBACK_GAME_IDS,
+  CORSI_FORWARD,
+  CORSI_BACKWARD,
+  isCorsiGameId,
   GAME_DIMENSIONS,
   DIMENSION_NAMES,
   GAME_NAMES,
@@ -33,33 +39,50 @@ import {
   type ResultInput,
   type History,
   type GameId,
+  type NBackGameId,
+  type CorsiGameId,
   type GameCounts,
   type DualCounts,
   type TripleCounts,
 } from "../shared/contracts";
 
-type Page = "home" | "n-back" | "color-n-back" | "triple-n-back" | "records";
+type Page =
+  | "home"
+  | "n-back"
+  | "color-n-back"
+  | "triple-n-back"
+  | "records"
+  | "corsi"
+  | "corsi-backward";
 const applicationTitle = document.title;
 const currentPage = (): Page =>
-  location.hash === "#n-back"
-    ? "n-back"
-    : location.hash === "#color-n-back"
-      ? "color-n-back"
-      : location.hash === "#triple-n-back"
-        ? "triple-n-back"
-        : location.hash === "#records"
-          ? "records"
-          : "home";
+  location.hash === "#corsi"
+    ? "corsi"
+    : location.hash === "#corsi-backward"
+      ? "corsi-backward"
+      : location.hash === "#n-back"
+        ? "n-back"
+        : location.hash === "#color-n-back"
+          ? "color-n-back"
+          : location.hash === "#triple-n-back"
+            ? "triple-n-back"
+            : location.hash === "#records"
+              ? "records"
+              : "home";
 const go = (page: Page) => {
   location.hash = page;
 };
 const trainingPage = (game: GameId): Page =>
-  game === GAME
-    ? "n-back"
-    : game === COLOR_GAME
-      ? "color-n-back"
-      : "triple-n-back";
-const pageGame = (page: Page): GameId =>
+  game === CORSI_FORWARD
+    ? "corsi"
+    : game === CORSI_BACKWARD
+      ? "corsi-backward"
+      : game === GAME
+        ? "n-back"
+        : game === COLOR_GAME
+          ? "color-n-back"
+          : "triple-n-back";
+const pageGame = (page: Page): NBackGameId =>
   page === "triple-n-back"
     ? TRIPLE_GAME
     : page === "color-n-back"
@@ -260,6 +283,15 @@ export function App() {
     [login, setLogin] = useState(false),
     [notice, setNotice] = useState(""),
     [revision, setRevision] = useState(0);
+  const [guestCorsiStarts, setGuestCorsiStarts] = useState<
+    Record<CorsiGameId, number>
+  >({
+    [CORSI_FORWARD]: 2,
+    [CORSI_BACKWARD]: 2,
+  });
+  const updateGuestCorsi = useCallback((game: CorsiGameId, length: number) => {
+    setGuestCorsiStarts((previous) => ({ ...previous, [game]: length }));
+  }, []);
   const refresh = useCallback(async () => {
     try {
       const data = await api<{ user: User }>("me");
@@ -276,7 +308,7 @@ export function App() {
     document.title =
       page === "home"
         ? applicationTitle
-        : `${page === "records" ? "个人记录" : GAME_NAMES[pageGame(page)]} | ${applicationTitle}`;
+        : `${page === "records" ? "个人记录" : page === "corsi" ? "顺序记忆 · 正序" : page === "corsi-backward" ? "顺序记忆 · 倒序" : GAME_NAMES[pageGame(page)]} | ${applicationTitle}`;
   }, [page]);
   useEffect(() => {
     void refresh();
@@ -427,14 +459,41 @@ export function App() {
         {page === "home" ? (
           <Home />
         ) : page === "records" ? (
-          <Records
-            gameId={recordsGame}
-            onGame={setRecordsGame}
+          isCorsiGameId(recordsGame) ? (
+            <CorsiRecords
+              gameId={recordsGame}
+              user={user}
+              revision={revision}
+              onGame={setRecordsGame}
+              onTrain={(game) => go(trainingPage(game))}
+              onLogin={openLogin}
+              onError={onError}
+              onUser={verifiedUser}
+            />
+          ) : (
+            <Records
+              gameId={recordsGame}
+              onGame={setRecordsGame}
+              user={user}
+              revision={revision}
+              onLogin={openLogin}
+              onError={onError}
+              onUser={verifiedUser}
+            />
+          )
+        ) : page === "corsi" || page === "corsi-backward" ? (
+          <CorsiTraining
+            key={page}
+            gameId={page === "corsi" ? CORSI_FORWARD : CORSI_BACKWARD}
             user={user}
-            revision={revision}
-            onLogin={openLogin}
-            onError={onError}
+            offline={offline}
+            guestStarts={guestCorsiStarts}
+            onGuestStart={updateGuestCorsi}
+            onRecords={openRecords}
             onUser={verifiedUser}
+            onError={onError}
+            onSaved={savedCallback}
+            onAbortNotice={abortNotice}
           />
         ) : (
           <Training
@@ -464,7 +523,7 @@ function Home() {
         <p>选一个游戏，开始练习。</p>
       </div>
       <section className="games-grid" aria-label="游戏列表">
-        {GAME_IDS.map((gameId) => (
+        {NBACK_GAME_IDS.map((gameId) => (
           <article
             key={gameId}
             className="game-card"
@@ -496,6 +555,23 @@ function Home() {
             </button>
           </article>
         ))}
+        <article className="game-card" aria-labelledby="corsi-title">
+          <div className="game-card-icon">
+            <MiniGrid />
+          </div>
+          <h2 id="corsi-title">顺序记忆 · Corsi 方块</h2>
+          <p className="game-description">
+            记住依次亮起的路径，按正序或倒序复现。
+          </p>
+          <div className="game-meta">
+            <span>正序／倒序</span>
+            <span>逐级挑战</span>
+          </div>
+          <button className="primary card-start" onClick={() => go("corsi")}>
+            开始训练
+            <Icon name="arrow" size={18} />
+          </button>
+        </article>
       </section>
     </>
   );
@@ -546,7 +622,7 @@ function Training({
   onSaved,
   onAbortNotice,
 }: {
-  gameId: GameId;
+  gameId: NBackGameId;
   onRecords: (game: GameId) => void;
   user: User | null;
   offline: boolean;
@@ -572,7 +648,7 @@ function Training({
     [saveStatus, setSaveStatus] = useState<
       "saving" | "saved" | "failed" | "guest"
     >("guest");
-  const game = useRef<NBackGame<GameId> | null>(null),
+  const game = useRef<NBackGame<NBackGameId> | null>(null),
     owner = useRef<User | null>(null),
     alive = useRef(true),
     saving = useRef(false),
@@ -686,7 +762,7 @@ function Training({
       if (!alive.current) return;
       owner.current = current;
       resultId.current = crypto.randomUUID();
-      game.current = new NBackGame<GameId>(
+      game.current = new NBackGame<NBackGameId>(
         n,
         triple
           ? generateTripleSequence(n)
@@ -1154,7 +1230,7 @@ function Records({
   onError,
   onUser,
 }: {
-  gameId: GameId;
+  gameId: NBackGameId;
   onGame: (game: GameId) => void;
   user: User | null;
   revision: number;

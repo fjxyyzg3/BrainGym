@@ -120,6 +120,14 @@ export async function buildApp(options: {
     const data = parseResult(req.body);
     return store.save(user, data, now());
   });
+  app.get(`${apiPath}corsi/progress`, async (req) => {
+    const user = store.userForSession(req.cookies.bg_session, now());
+    return store.corsiProgress(user, now());
+  });
+  app.post(`${apiPath}corsi/progress/reset`, async (req) => {
+    const user = store.userForSession(req.cookies.bg_session, now());
+    return store.resetCorsiProgress(user, req.body, now());
+  });
   app.get(`${apiPath}history`, async (req) => {
     const user = store.userForSession(req.cookies.bg_session, now());
     const raw = (req.query as { page?: string }).page ?? "1";

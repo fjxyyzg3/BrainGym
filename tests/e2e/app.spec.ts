@@ -352,3 +352,31 @@ for (const visibilityGame of [
     expect(run.status, run.stderr).toBe(0);
     expect(run.stdout).toContain("PASS: native Chromium");
   });
+
+for (const visibilityGame of ["corsi-forward", "corsi-backward"])
+  for (const phase of ["presenting", "recalling", "feedback"])
+    test(`native browser ${visibilityGame} ${phase} aborts without a saved result`, async ({
+      baseURL,
+    }) => {
+      const run = spawnSync(
+        process.execPath,
+        ["scripts/check-native-visibility.mjs"],
+        {
+          encoding: "utf8",
+          timeout: 30000,
+          windowsHide: true,
+          env: {
+            ...process.env,
+            PLAYWRIGHT_CHROMIUM_EXECUTABLE:
+              process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ??
+              chromium.executablePath(),
+            VISIBILITY_BASE_URL: baseURL,
+            VISIBILITY_GAME: visibilityGame,
+            VISIBILITY_CORSI_PHASE: phase,
+            NATIVE_VISIBILITY_DATABASE: process.env.E2E_DATABASE_PATH,
+          },
+        },
+      );
+      expect(run.status, run.stderr).toBe(0);
+      expect(run.stdout).toContain("PASS: native Chromium");
+    });

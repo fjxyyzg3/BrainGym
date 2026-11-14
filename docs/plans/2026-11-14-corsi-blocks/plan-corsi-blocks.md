@@ -27,11 +27,11 @@
 
 **Acceptance:** 正倒序索引正确；每级两题；四个 spec 起点例子成立；0 格未通过；长度跨过 9；准备可取消、每批至多 256 步；漏交付／101 ms 延迟作废，100 ms 允许。
 
-- [ ] RED：在 `tests/corsi.test.ts` 通过公开规则／引擎行为构造断言。先运行 `node --import tsx --test tests/corsi.test.ts`，确认失败源于 Corsi 标识／能力缺失；不接受语法或 fixture 错误作为 RED。
-- [ ] GREEN：区分 `NBackGameId` 与公共 `GameId`，保留旧结果别名并新增公共结果联合；共享 Corsi 摘要校验与 `score/nextStartLength` 推导，规则版本 1。
-- [ ] GREEN：按需分批生成无相邻重复序列，同级第二题与首题不同；取消和资源错误不产生结果。引擎拥有序列、输入、反馈与最终摘要；视图回执只是有效展示的运行机制，不增加测试专用状态入口。
-- [ ] GREEN：实现准备、展示、复现、反馈、结束、作废；首题对仍做第二题，完整序列后整体判定，记不住计一次失败；保持已完成结果不受后来 abort 影响。
-- [ ] 聚焦回归：运行本任务测试及 `tests/game.test.ts`、`tests/color-n-back.test.ts`、`tests/triple-n-back.test.ts`。记录 RED/GREEN 与取消／边界信号；源码 checkpoint 延后至 Task 4 门槛通过。
+- [x] RED：在 `tests/corsi.test.ts` 通过公开规则／引擎行为构造断言。先运行 `node --import tsx --test tests/corsi.test.ts`，确认失败源于 Corsi 标识／能力缺失；不接受语法或 fixture 错误作为 RED。
+- [x] GREEN：区分 `NBackGameId` 与公共 `GameId`，保留旧结果别名并新增公共结果联合；共享 Corsi 摘要校验与 `score/nextStartLength` 推导，规则版本 1。
+- [x] GREEN：按需分批生成无相邻重复序列，同级第二题与首题不同；取消和资源错误不产生结果。引擎拥有序列、输入、反馈与最终摘要；视图回执只是有效展示的运行机制，不增加测试专用状态入口。
+- [x] GREEN：实现准备、展示、复现、反馈、结束、作废；首题对仍做第二题，完整序列后整体判定，记不住计一次失败；保持已完成结果不受后来 abort 影响。
+- [x] 聚焦回归：运行本任务测试及 `tests/game.test.ts`、`tests/color-n-back.test.ts`、`tests/triple-n-back.test.ts`。记录 RED/GREEN 与取消／边界信号；源码 checkpoint 延后至 Task 4 门槛通过。
 
 ## Task 2：附加存储、授权接口与发布数据保护
 
@@ -39,12 +39,12 @@
 
 **Acceptance:** 两方向、用户及世代隔离；时间锚点返回；新结果未来 5000 ms 允许、5001 ms 拒绝；旧异常时间不重新生效；恢复保留历史／最佳、旧局不改新世代进度；跨表 ID 冲突及旧 N-back 重试兼容。
 
-- [ ] RED：先以真实临时 Store／Fastify inject 调用 Corsi progress，断言匿名 401、登录用户首次为 2；现有版本无接口应产生预期不符的失败。扩展合法／非法摘要、首次入库时间、两方向历史及最佳断言。
-- [ ] GREEN：附加 `corsi_results`、`corsi_progress_resets` 原子幂等初始化，核心 user_version 仍为 1；保存分派复用事务和身份前置校验，旧规范化顺序不变，跨两成绩表检查 ID。
-- [ ] GREEN：实现 progress 的用户／serverNow／世代／起点／最佳；按完成时间选世代内最近有效结果，既有未来异常记录对 immutable receivedAt 判定并在历史标记。
-- [ ] GREEN：实现 reset 的会话／Origin／expectedUserId／expectedEpoch 校验与事务递增，重复旧世代请求返回 409。旧世代成绩保留历史与最佳，未知未来世代拒绝；幂等查重先于新结果时间检查。
-- [ ] 回归：服务端测试覆盖匿名、过期／吊销会话、换账号、越权重置、响应丢失式重试、旧局迟到和序列摘要大小不随格数增长。指纹检查同时保护附加表存在性及行数据。
-- [ ] 兼容：在临时目录物化基线 `eaa686a` 的 Store、规则、合同与错误模块，用真实旧版入口重新打开含两张附加表的隔离库，再用新版打开，验证新旧数据及世代保留；不以当前实现冒充旧版。运行 `node --import tsx --test tests/corsi-server.test.ts tests/server.test.ts tests/release-artifact.test.ts`；checkpoint 延后。
+- [x] RED：先以真实临时 Store／Fastify inject 调用 Corsi progress，断言匿名 401、登录用户首次为 2；现有版本无接口应产生预期不符的失败。扩展合法／非法摘要、首次入库时间、两方向历史及最佳断言。
+- [x] GREEN：附加 `corsi_results`、`corsi_progress_resets` 原子幂等初始化，核心 user_version 仍为 1；保存分派复用事务和身份前置校验，旧规范化顺序不变，跨两成绩表检查 ID。
+- [x] GREEN：实现 progress 的用户／serverNow／世代／起点／最佳；按完成时间选世代内最近有效结果，既有未来异常记录对 immutable receivedAt 判定并在历史标记。
+- [x] GREEN：实现 reset 的会话／Origin／expectedUserId／expectedEpoch 校验与事务递增，重复旧世代请求返回 409。旧世代成绩保留历史与最佳，未知未来世代拒绝；幂等查重先于新结果时间检查。
+- [x] 回归：服务端测试覆盖匿名、过期／吊销会话、换账号、越权重置、响应丢失式重试、旧局迟到和序列摘要大小不随格数增长。指纹检查同时保护附加表存在性及行数据。
+- [x] 兼容：在临时目录物化基线 `eaa686a` 的 Store、规则、合同与错误模块，用真实旧版入口重新打开含两张附加表的隔离库，再用新版打开，验证新旧数据及世代保留；不以当前实现冒充旧版。运行 `node --import tsx --test tests/corsi-server.test.ts tests/server.test.ts tests/release-artifact.test.ts`；checkpoint 延后。
 
 ## Task 3：前端完整体验与浏览器证据
 
@@ -52,21 +52,21 @@
 
 **Acceptance:** 单张大厅卡片、正倒序 hash；鼠标／触屏／数字键复现；当前页游客进度；登录起点跨设备；资源恢复及漏展示不罚分；旧模式显示和身份边界保持。
 
-- [ ] RED：先写大厅 Corsi 卡片与准备页浏览器断言，并在既有构建上执行 `npx playwright test tests/e2e/corsi.spec.ts --grep '入口'`，确认缺卡片造成失败，不以页面／服务故障作为 RED。
-- [ ] GREEN：新训练组件接入 owner、方向、起始长度、世代、serverNow＋performance.now 锚点；异步准备可取消，useLayoutEffect 反馈相位提交，rAF 检测超限后先 abort 再处理输入。
-- [ ] GREEN：九个原生按钮编号 1～9，只用 click 计步，数字键忽略 repeat／修饰键／输入框；所有阶段有中文说明，反馈不依赖颜色。复现只显示输入数量；题间手动继续；保存与进度刷新失败分开处理。
-- [ ] GREEN：恢复使用原生 dialog.showModal，取消为默认安全动作；确认携带预期用户／世代，网络未知先重查，不盲目再次 POST。序列准备使用 scheduler.yield 特性检测及 setTimeout 回退；不新增 polyfill／依赖。
-- [ ] GREEN：公共导航接入两 hash，Records 按游戏族选择专用渲染；Corsi 历史与最佳使用格数，结果返回正确方向，旧请求失效；游客内存进度由 App 文档生命周期持有，刷新归零。
-- [ ] 浏览器回归：真实可见刺激驱动正序／倒序；完整结束、不给逐步提示、记不住、按键去重、移动触屏、方向／账号切换、保存失败／重试、重置竞争、旧结果迟到、墙上时钟修改、前台阻塞作废、离线游客及刷新重置。测试不向生产组件注入答案接口。
-- [ ] 原生后台：扩展既有 CDP 脚本覆盖 Corsi 的展示／复现／反馈；使用专用数据库及账号。保存桌面／移动准备、训练、结果与记录截图，标明模拟视口和实际硬件覆盖差异；checkpoint 延后。
+- [x] RED：先写大厅 Corsi 卡片与准备页浏览器断言，并在既有构建上执行 `npx playwright test tests/e2e/corsi.spec.ts --grep '入口'`，确认缺卡片造成失败，不以页面／服务故障作为 RED。
+- [x] GREEN：新训练组件接入 owner、方向、起始长度、世代、serverNow＋performance.now 锚点；异步准备可取消，useLayoutEffect 反馈相位提交，rAF 检测超限后先 abort 再处理输入。
+- [x] GREEN：九个原生按钮编号 1～9，只用 click 计步，数字键忽略 repeat／修饰键／输入框；所有阶段有中文说明，反馈不依赖颜色。复现只显示输入数量；题间手动继续；保存与进度刷新失败分开处理。
+- [x] GREEN：恢复使用原生 dialog.showModal，取消为默认安全动作；确认携带预期用户／世代，网络未知先重查，不盲目再次 POST。序列准备使用 scheduler.yield 特性检测及 setTimeout 回退；不新增 polyfill／依赖。
+- [x] GREEN：公共导航接入两 hash，Records 按游戏族选择专用渲染；Corsi 历史与最佳使用格数，结果返回正确方向，旧请求失效；游客内存进度由 App 文档生命周期持有，刷新归零。
+- [x] 浏览器回归：真实可见刺激驱动正序／倒序；完整结束、不给逐步提示、记不住、按键去重、移动触屏、方向／账号切换、保存失败／重试、重置竞争、旧结果迟到、墙上时钟修改、前台阻塞作废、离线游客及刷新重置。测试不向生产组件注入答案接口。
+- [x] 原生后台：扩展既有 CDP 脚本覆盖 Corsi 的展示／复现／反馈；使用专用数据库及账号。保存桌面／移动准备、训练、结果与记录截图，标明模拟视口和实际硬件覆盖差异；checkpoint 延后。
 
 ## Task 4：全量验证、知识与代码 checkpoint
 
 **Files:** 新建 `docs/wiki/corsi.md`、`docs/verification/corsi-blocks.md`；更新 `README.md`、`docs/wiki/architecture.md`、`docs/wiki/operations.md`、本 plan。
 
-- [ ] 调用 wiki 同步实际规则、时间／世代合同、资源恢复、数据兼容与运维边界，验收记录只写真实证据，区分模拟及实机未验证。
-- [ ] 依次执行 `npm run typecheck`、`npm run build`、`npm test`、`npm run test:e2e`；同一构建设置 `E2E_BASE_PATH=/braingym/` 再执行浏览器测试，finally 清除变量。失败修实现或环境，不削弱门槛。
-- [ ] 按最终 status、stat、文件列表和 diff 执行中文 Findings／Verification／Residual Risk 安全审查。未改依赖则不新增无必要的 audit；若依赖实际变化，执行 npm audit --json 并评估。
+- [x] 调用 wiki 同步实际规则、时间／世代合同、资源恢复、数据兼容与运维边界，验收记录只写真实证据，区分模拟及实机未验证。
+- [x] 依次执行 `npm run typecheck`、`npm run build`、`npm test`、`npm run test:e2e`；同一构建设置 `E2E_BASE_PATH=/braingym/` 再执行浏览器测试，finally 清除变量。失败修实现或环境，不削弱门槛。
+- [x] 按最终 status、stat、文件列表和 diff 执行中文 Findings／Verification／Residual Risk 安全审查。未改依赖则不新增无必要的 audit；若依赖实际变化，执行 npm audit --json 并评估。
 - [ ] 所有必需代码门槛通过后按 git-workflow checkpoint 只提交任务文件；记录 hash。通过的最终证据可复用，不为提交重复全量测试。
 - [ ] 执行 `npm run rehearse` 准备真实隔离候选并记录证据；若运行源码改变则重新生成候选。提交必要的验收文档，finalize 刷新／rebase／push，main 干净时合入并 push，核对实际远端 SHA，按偏好清理任务分支及 worktree。
 
@@ -80,3 +80,11 @@
 ## 执行记录
 
 - 2026-11-14：用户批准 spec，文档检查通过，设计基线 checkpoint `b0eba74`。继承现有 prepared Git 生命周期，主工作区 main 仅前进了一份无运行影响的既有验收文档。
+
+- Task 1：初始 RED 为缺少 Corsi 合同的断言失败（10/10）；新增规则／引擎后同命令 10/10 GREEN，既有三种 N-back 聚焦回归 22/22 通过。源码尚未 checkpoint，等待完整门槛。
+
+- Task 2：progress 初始 RED 为真实 HTTP 404；实现后 Corsi／原服务端／发布产物聚焦回归 18/18 GREEN，真实 eaa686a Store 重新打开兼容通过。独立 worktree 首次 npm ci 后，既有发布帮助测试恢复通过，依赖版本与锁文件未改。
+
+- Task 3：真实归档基线构建缺少卡片产生浏览器 RED；可见刺激、离线游客及 6 项原生后台检查已通过。文稿经独立优化和只读复核通过；完整根路径及前缀回归进行中。原生脚本等待 Chrome 启动帧稳定后开局，保留 100 ms 判废门槛。
+
+- Task 4：typecheck、build、Node 110/110、根路径浏览器 62/62、同构建前缀浏览器 62/62 全部通过；环境变量已清除。凭据／禁止产物扫描及文档链接检查通过；依赖版本未变。等待代码 checkpoint 与隔离演练。

@@ -7,6 +7,8 @@ import { Store } from "../dist/server/server/store.js";
 import { normalizeBasePath } from "../dist/server/shared/paths.js";
 
 const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);
+const corsi = process.env.VISIBILITY_GAME?.startsWith("corsi-");
+const corsiPhase = process.env.VISIBILITY_CORSI_PHASE ?? "presenting";
 
 // Use raw CDP: Playwright deliberately forces pages to remain visible. This
 // checks the browser's real tab lifecycle without changing document properties.
@@ -72,7 +74,7 @@ try {
       socket.send(JSON.stringify({ id, method, params, sessionId }));
     });
   const { targetId } = await send("Target.createTarget", {
-    url: `${new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000").origin}${basePath}#${process.env.VISIBILITY_GAME === "spatial-color-number-n-back" ? "triple-n-back" : process.env.VISIBILITY_GAME === "spatial-color-n-back" ? "color-n-back" : "n-back"}`,
+    url: `${new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000").origin}${basePath}#${corsi ? (process.env.VISIBILITY_GAME === "corsi-backward" ? "corsi-backward" : "corsi") : process.env.VISIBILITY_GAME === "spatial-color-number-n-back" ? "triple-n-back" : process.env.VISIBILITY_GAME === "spatial-color-n-back" ? "color-n-back" : "n-back"}`,
   });
   const { sessionId } = await send("Target.attachToTarget", {
     targetId,
@@ -103,11 +105,35 @@ try {
   if (process.env.NATIVE_VISIBILITY_DATABASE) {
     const store = new Store(process.env.NATIVE_VISIBILITY_DATABASE);
     const account = store.createUser("Native visibility verification");
+    // Corsi adds six lifecycle cases. Seed their real sessions in the isolated
+    // database so they don't exhaust unrelated tests' HTTP login budget.
+    const fixtureSession = corsi
+      ? store.login(account.token, Date.now()).session
+      : null;
     store.close();
-    const loggedIn = await evaluate(
-      `fetch(${JSON.stringify(`${basePath}api/login`)},{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:${JSON.stringify(account.token)}})}).then(r=>r.ok)`,
-    );
-    assert.equal(loggedIn, true);
+    if (fixtureSession) {
+      const cookie = await send(
+        "Network.setCookie",
+        {
+          name: "bg_session",
+          value: fixtureSession,
+          path: basePath,
+          httpOnly: true,
+          sameSite: "Strict",
+          secure: false,
+          url:
+            new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000")
+              .origin + basePath,
+        },
+        sessionId,
+      );
+      assert.equal(cookie.success, true);
+    } else {
+      const loggedIn = await evaluate(
+        `fetch(${JSON.stringify(`${basePath}api/login`)},{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:${JSON.stringify(account.token)}})}).then(r=>r.ok)`,
+      );
+      assert.equal(loggedIn, true);
+    }
     await send("Page.reload", { ignoreCache: true }, sessionId);
     for (let i = 0; i < 100; i++) {
       if (
@@ -123,7 +149,21 @@ try {
       true,
     );
   }
+  const other = await send("Target.createTarget", {
+    url: "about:blank",
+    newWindow: false,
+  });
   await send("Target.activateTarget", { targetId });
+  if (corsi) {
+    // A fresh Chrome profile stalls its first frames during startup. Wait for
+    // stable foreground frames before the game; keep its 100ms rule intact.
+    await evaluate(
+      "Promise.all([document.fonts.ready,navigator.serviceWorker.ready]).then(()=>true)",
+    );
+    await evaluate(
+      "new Promise(resolve=>{const begin=performance.now();let stable=begin,last=begin;requestAnimationFrame(function frame(t){if(t-last>100)stable=t;last=t;if(t-begin>=2000&&t-stable>=500)resolve(true);else requestAnimationFrame(frame)})})",
+    );
+  }
   await evaluate(
     "window.__visibilityEvents=[]; document.addEventListener('visibilitychange',()=>window.__visibilityEvents.push(document.visibilityState)); document.querySelector('.start-session').click(); true",
   );
@@ -132,10 +172,41 @@ try {
     await delay(100);
   }
   assert.equal(await evaluate("!!document.querySelector('.play-page')"), true);
-  const other = await send("Target.createTarget", {
-    url: "about:blank",
-    newWindow: false,
-  });
+  if (corsi) {
+    const expectedText = corsiPhase === "presenting" ? "请记忆" : "复现";
+    let ready = false;
+    for (let i = 0; i < 100; i++) {
+      if (
+        await evaluate(
+          `document.querySelector('[data-testid="corsi-phase"]')?.textContent.includes(${JSON.stringify(expectedText)}) ?? false`,
+        )
+      ) {
+        ready = true;
+        break;
+      }
+      await delay(30);
+    }
+    assert.equal(
+      ready,
+      true,
+      `Corsi did not reach the requested foreground phase: ${JSON.stringify(await evaluate("({phase:document.querySelector('[data-testid=corsi-phase]')?.textContent,warning:document.querySelector('.warning')?.textContent,visibility:document.visibilityState,events:window.__visibilityEvents})"))}`,
+    );
+    if (corsiPhase === "feedback") {
+      await evaluate(
+        "Array.from(document.querySelectorAll('button')).find(x=>x.textContent==='记不住了').click(); true",
+      );
+      assert.equal(
+        await evaluate(
+          "!!document.querySelector('[data-testid=corsi-feedback]')",
+        ),
+        true,
+      );
+    }
+    assert.equal(
+      await evaluate("!!document.querySelector('.corsi-aborted')"),
+      false,
+    );
+  }
   await send("Target.activateTarget", { targetId: other.targetId });
   let result;
   for (let i = 0; i < 50; i++) {
@@ -149,7 +220,7 @@ try {
     result.events.includes("hidden"),
     "Browser did not send a native hidden event",
   );
-  assert.match(result.warning, /本局已结束/);
+  assert.match(result.warning, corsi ? /本局未计入/ : /本局已结束/);
   assert.equal(
     await evaluate("!!document.querySelector('.save-message')"),
     false,

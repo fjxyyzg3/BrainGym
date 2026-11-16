@@ -68,7 +68,7 @@ RED 证据：`node --import tsx --test tests/task-switching-server.test.ts` 实�
 - [x] 执行原生后台和桌面／窄屏截图检查，检查左右映射、焦点、文字、横向溢出；所有服务与手动验证显式使用隔离数据库。
 - [x] 使用 wiki 工作流同步已验证事实；README 概览、架构类型与数据保护范围同步；验证文档记录 RED/GREEN、实际命令、结果和限制。
 - [x] 审查 status、stat、实际 diff、文件列表；覆盖授权、参数校验、跨表事务、浏览器持久化、网络／打包输入、凭据文档及依赖不变，输出中文 Findings／Verification／Residual Risk。
-- [ ] 调用 git-workflow checkpoint/finalize：只 stage 本任务文件，按偏好刷新／rebase、提交、push 并核对实际远端；主树干净才合入 main，再推送、核对并清理已合并干净分支／worktree。
+- [x] 调用 git-workflow checkpoint/finalize：只 stage 本任务文件，按偏好刷新／rebase、提交、push 并核对实际远端；主树干净才合入 main，再推送、核对并清理已合并干净分支／worktree。
 
 ### Task 5: 演练和正式发布
 
@@ -76,7 +76,7 @@ RED 证据：`node --import tsx --test tests/task-switching-server.test.ts` 实�
 
 **Acceptance:** 稳定 main 的已验证候选完成正式发布，既有数据保留，真实入口的新模式可用。
 
-- [ ] 从稳定 main 重新建立 Git 上下文，读现役运维和发布入口；执行 `npm run rehearse`，检查候选与当前 main、Node、锁文件和运行产物证据一致。
-- [ ] 显式使用该候选执行既有 release deploy，按 appId Stop/Start，定义不变不 Reload；遵守停服后完整目录备份及恢复责任。
-- [ ] 检查 release status、健康、数据指纹、程序摘要及真实 HTTPS 入口；匿名练习不创建正式测试身份或成绩，真实值只留私有材料。
+- [x] 从稳定 main 重新建立 Git 上下文，读现役运维和发布入口；执行 `npm run rehearse`，检查候选与当前 main、Node、锁文件和运行产物证据一致。
+- [x] 显式使用该候选执行既有 release deploy，按 appId Stop/Start，定义不变不 Reload；遵守停服后完整目录备份及恢复责任。
+- [x] 检查 release status、健康、数据指纹、程序摘要及真实 HTTPS 入口；匿名练习不创建正式测试身份或成绩，真实值只留私有材料。
 - [ ] 回写脱敏验证结果，执行文档安全审查与 git-workflow finalize；记录最终提交、远端 SHA、清理及剩余风险后报告整体结果。

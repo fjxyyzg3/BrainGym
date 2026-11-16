@@ -79,4 +79,6 @@ RED 证据：`node --import tsx --test tests/task-switching-server.test.ts` 实�
 - [x] 从稳定 main 重新建立 Git 上下文，读现役运维和发布入口；执行 `npm run rehearse`，检查候选与当前 main、Node、锁文件和运行产物证据一致。
 - [x] 显式使用该候选执行既有 release deploy，按 appId Stop/Start，定义不变不 Reload；遵守停服后完整目录备份及恢复责任。
 - [x] 检查 release status、健康、数据指纹、程序摘要及真实 HTTPS 入口；匿名练习不创建正式测试身份或成绩，真实值只留私有材料。
-- [ ] 回写脱敏验证结果，执行文档安全审查与 git-workflow finalize；记录最终提交、远端 SHA、清理及剩余风险后报告整体结果。
+- [x] 回写脱敏验证结果，执行文档安全审查与 git-workflow finalize；记录最终提交、远端 SHA、清理及剩余风险后报告整体结果。
+
+交付记录：代码提交 `f24110b`（`feat: add numeric task switching training`）已合入 main，任务分支和 worktree 已清理；验收补录提交 `6040aac2d3a02faabd1b104e89fd2d5387e4d5f8`（`docs: verify task switching production deployment`）已推送 main，当次实际远端 SHA 核对一致。未创建 PR；最后的计划状态补录只改变文档，不影响已验证候选或正式程序。

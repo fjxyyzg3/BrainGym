@@ -9,10 +9,11 @@ import { normalizeBasePath } from "../dist/server/shared/paths.js";
 const basePath = normalizeBasePath(process.env.E2E_BASE_PATH);
 const corsi = process.env.VISIBILITY_GAME?.startsWith("corsi-");
 const stroop = process.env.VISIBILITY_GAME === "stroop";
-const startSelector = stroop
-  ? '[data-testid="stroop-start"]'
-  : ".start-session";
-const playSelector = stroop ? ".stroop-training" : ".play-page";
+const rotation = process.env.VISIBILITY_GAME === "mental-rotation";
+const prefix = rotation ? "rotation" : "stroop";
+const startSelector =
+  stroop || rotation ? `[data-testid="${prefix}-start"]` : ".start-session";
+const playSelector = stroop || rotation ? `.${prefix}-training` : ".play-page";
 const corsiPhase = process.env.VISIBILITY_CORSI_PHASE ?? "presenting";
 
 // Use raw CDP: Playwright deliberately forces pages to remain visible. This
@@ -79,7 +80,7 @@ try {
       socket.send(JSON.stringify({ id, method, params, sessionId }));
     });
   const { targetId } = await send("Target.createTarget", {
-    url: `${new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000").origin}${basePath}#${stroop ? "stroop" : corsi ? (process.env.VISIBILITY_GAME === "corsi-backward" ? "corsi-backward" : "corsi") : process.env.VISIBILITY_GAME === "spatial-color-number-n-back" ? "triple-n-back" : process.env.VISIBILITY_GAME === "spatial-color-n-back" ? "color-n-back" : "n-back"}`,
+    url: `${new URL(process.env.VISIBILITY_BASE_URL ?? "http://127.0.0.1:3000").origin}${basePath}#${rotation ? "mental-rotation" : stroop ? "stroop" : corsi ? (process.env.VISIBILITY_GAME === "corsi-backward" ? "corsi-backward" : "corsi") : process.env.VISIBILITY_GAME === "spatial-color-number-n-back" ? "triple-n-back" : process.env.VISIBILITY_GAME === "spatial-color-n-back" ? "color-n-back" : "n-back"}`,
   });
   const { sessionId } = await send("Target.attachToTarget", {
     targetId,
@@ -96,7 +97,7 @@ try {
   for (let i = 0; i < 100; i++) {
     if (
       await evaluate(
-        `!!document.querySelector(${JSON.stringify(stroop ? ".stroop-start-actions" : startSelector)})`,
+        `!!document.querySelector(${JSON.stringify(stroop || rotation ? `.${prefix}-start-actions` : startSelector)})`,
       )
     )
       break;
@@ -118,7 +119,9 @@ try {
     // Corsi adds six lifecycle cases. Seed their real sessions in the isolated
     // database so they don't exhaust unrelated tests' HTTP login budget.
     const fixtureSession =
-      corsi || stroop ? store.login(account.token, Date.now()).session : null;
+      corsi || stroop || rotation
+        ? store.login(account.token, Date.now()).session
+        : null;
     store.close();
     if (fixtureSession) {
       const cookie = await send(
@@ -189,15 +192,27 @@ try {
     await evaluate(`!!document.querySelector(${JSON.stringify(playSelector)})`),
     true,
   );
-  if (stroop) {
-    const phase = process.env.VISIBILITY_STROOP_PHASE ?? "question";
+  if (stroop || rotation) {
+    const phase =
+      (rotation
+        ? process.env.VISIBILITY_ROTATION_PHASE
+        : process.env.VISIBILITY_STROOP_PHASE) ?? "question";
     const clickAnswer = async () => {
       const clicked = await evaluate(
-        `(()=>{const word=document.querySelector('[data-testid="stroop-word"]');if(!word)return false;const color=getComputedStyle(word).color;const names={'rgb(255, 139, 148)':'红','rgb(118, 188, 255)':'蓝','rgb(104, 217, 173)':'绿','rgb(246, 214, 93)':'黄'};const button=Array.from(document.querySelectorAll('.stroop-answers button')).find(x=>x.textContent===names[color]);if(!button||button.getAttribute('aria-disabled')==='true')return false;button.click();return true;})()`,
+        rotation
+          ? `(()=>{const paths=Array.from(document.querySelectorAll('[data-testid="rotation-pair"] path'));if(paths.length!==2)return false;const areas=paths.map(path=>{const p=Array.from(path.getAttribute('d').matchAll(/[ML](-?[\\d.]+),(-?[\\d.]+)/g),m=>[Number(m[1]),Number(m[2])]);return p.reduce((sum,[x,y],i)=>{const[a,b]=p[(i+1)%p.length];return sum+x*b-y*a;},0)/2;});const name=areas[0]*areas[1]<0?'镜像':'仅旋转';const button=Array.from(document.querySelectorAll('.rotation-answers button')).find(b=>b.textContent===name);if(!button||button.getAttribute('aria-disabled')==='true')return false;button.click();return true;})()`
+          : `(()=>{const word=document.querySelector('[data-testid="stroop-word"]');if(!word)return false;const color=getComputedStyle(word).color;const names={'rgb(255, 139, 148)':'红','rgb(118, 188, 255)':'蓝','rgb(104, 217, 173)':'绿','rgb(246, 214, 93)':'黄'};const button=Array.from(document.querySelectorAll('.stroop-answers button')).find(x=>x.textContent===names[color]);if(!button||button.getAttribute('aria-disabled')==='true')return false;button.click();return true;})()`,
       );
       return clicked;
     };
-    const answers = phase === "complete" ? 40 : phase === "feedback" ? 1 : 0;
+    const answers =
+      phase === "complete"
+        ? rotation
+          ? 32
+          : 40
+        : phase === "feedback"
+          ? 1
+          : 0;
     for (let index = 0; index < answers; index++) {
       let answered = false;
       for (let attempt = 0; attempt < 200; attempt++) {
@@ -207,12 +222,12 @@ try {
         }
         await delay(10);
       }
-      assert.equal(answered, true, "Stroop did not deliver a live question");
+      assert.equal(answered, true, `${prefix} did not deliver a live question`);
     }
     if (answers)
       assert.equal(
         await evaluate(
-          "!!document.querySelector('[data-testid=stroop-feedback]')",
+          `!!document.querySelector('[data-testid=${prefix}-feedback]')`,
         ),
         true,
       );
@@ -225,13 +240,13 @@ try {
     if (phase === "complete") {
       assert.equal(
         await evaluate(
-          "!!document.querySelector('[data-testid=stroop-result]')",
+          `!!document.querySelector('[data-testid=${prefix}-result]')`,
         ),
         true,
       );
       assert.equal(
         await evaluate(
-          "!!document.querySelector('[data-testid=stroop-abort]')",
+          `!!document.querySelector('[data-testid=${prefix}-abort]')`,
         ),
         false,
       );
@@ -239,14 +254,14 @@ try {
     } else {
       assert.equal(
         await evaluate(
-          "!!document.querySelector('[data-testid=stroop-abort]')",
+          `!!document.querySelector('[data-testid=${prefix}-abort]')`,
         ),
         true,
       );
       assert.equal(uploads, 0);
     }
     console.log(
-      `PASS: native Stroop ${phase} -> hidden, ${phase === "complete" ? "complete result retained with one upload" : "aborted without upload"}`,
+      `PASS: native ${prefix} ${phase} -> hidden, ${phase === "complete" ? "complete result retained with one upload" : "aborted without upload"}`,
     );
     await send("Browser.close").catch(() => {});
   } else {

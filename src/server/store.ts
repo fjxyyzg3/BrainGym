@@ -5,6 +5,7 @@ import { dirname } from "node:path";
 import {
   GAME,
   STROOP_GAME,
+  ROTATION_GAME,
   TRIPLE_GAME,
   isNBackGameId,
   isCorsiGameId,
@@ -25,11 +26,18 @@ import {
   type StroopResultInput,
   type StroopSavedResult,
   type StroopHistory,
+  type RotationResultInput,
+  type RotationSavedResult,
+  type RotationHistory,
 } from "../shared/contracts.js";
 import { assertLevel, validateCounts, scoreResult } from "../shared/rules.js";
 import { AppError } from "./errors.js";
 import { CorsiRepository, parseCorsiResult } from "./corsi-store.js";
 import { StroopRepository, parseStroopResult } from "./stroop-store.js";
+import {
+  RotationRepository,
+  parseRotationResult,
+} from "./mental-rotation-store.js";
 
 const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
@@ -47,6 +55,8 @@ export function parseResult(value: unknown): AnyResultInput {
     return parseCorsiResult(value);
   if ((value as { game?: unknown }).game === STROOP_GAME)
     return parseStroopResult(value);
+  if ((value as { game?: unknown }).game === ROTATION_GAME)
+    return parseRotationResult(value);
   const p = value as ResultInput;
   const id = /^[a-f0-9-]{36}$/i;
   if (
@@ -115,6 +125,7 @@ export class Store {
   private db: DatabaseSync;
   private corsi: CorsiRepository;
   private stroop: StroopRepository;
+  private rotation: RotationRepository;
   private closed = false;
   private busyTimeout: number;
   constructor(path: string, options: { busyTimeoutMs?: number } = {}) {
@@ -148,6 +159,7 @@ export class Store {
     try {
       this.corsi = new CorsiRepository(this.db);
       this.stroop = new StroopRepository(this.db);
+      this.rotation = new RotationRepository(this.db);
     } catch (error) {
       this.db.close();
       throw error;
@@ -255,6 +267,11 @@ export class Store {
   save(user: User, payload: ResultInput, now: number): SavedResult;
   save(user: User, payload: CorsiResultInput, now: number): CorsiSavedResult;
   save(user: User, payload: StroopResultInput, now: number): StroopSavedResult;
+  save(
+    user: User,
+    payload: RotationResultInput,
+    now: number,
+  ): RotationSavedResult;
   save(user: User, payload: AnyResultInput, now: number): AnySavedResult;
   save(user: User, payload: AnyResultInput, now: number): AnySavedResult {
     if (payload.startedByUserId !== user.id)
@@ -272,6 +289,16 @@ export class Store {
       const serialized = JSON.stringify(payload);
       const corsi = this.corsi.find(user.id, payload.resultId);
       const stroop = this.stroop.find(user.id, payload.resultId);
+      const rotation = this.rotation.find(user.id, payload.resultId);
+      if (rotation) {
+        if (rotation.serialized !== serialized)
+          throw new AppError(
+            409,
+            "RESULT_CONFLICT",
+            "该对局已有不同的保存内容",
+          );
+        return rotation.result;
+      }
       if (stroop) {
         if (stroop.serialized !== serialized)
           throw new AppError(
@@ -303,6 +330,8 @@ export class Store {
         return this.corsi.saveNew(user.id, payload as CorsiResultInput, now);
       if (payload.game === STROOP_GAME)
         return this.stroop.saveNew(user.id, payload, now);
+      if (payload.game === ROTATION_GAME)
+        return this.rotation.saveNew(user.id, payload, now);
       const nback = payload as ResultInput;
       const receivedAt = new Date(now).toISOString();
       const computed = scoreResult(nback);
@@ -329,10 +358,16 @@ export class Store {
     page: number,
     game: typeof STROOP_GAME,
   ): StroopHistory;
+  history(
+    userId: string,
+    page: number,
+    game: typeof ROTATION_GAME,
+  ): RotationHistory;
   history(userId: string, page: number, game: GameId): AnyHistory;
   history(userId: string, page: number, game: GameId = GAME): AnyHistory {
     if (isCorsiGameId(game)) return this.corsi.history(userId, page, game);
     if (game === STROOP_GAME) return this.stroop.history(userId, page);
+    if (game === ROTATION_GAME) return this.rotation.history(userId, page);
     const total = this.db
       .prepare(
         "SELECT count(*) AS count FROM results WHERE user_id=? AND game=? AND version=?",
@@ -348,10 +383,12 @@ export class Store {
   bests(userId: string, game?: NBackGameId): SavedResult[];
   bests(userId: string, game: CorsiGameId): CorsiSavedResult[];
   bests(userId: string, game: typeof STROOP_GAME): StroopSavedResult[];
+  bests(userId: string, game: typeof ROTATION_GAME): RotationSavedResult[];
   bests(userId: string, game: GameId): AnySavedResult[];
   bests(userId: string, game: GameId = GAME): AnySavedResult[] {
     if (isCorsiGameId(game)) return this.corsi.bests(userId, game);
     if (game === STROOP_GAME) return this.stroop.bests(userId);
+    if (game === ROTATION_GAME) return this.rotation.bests(userId);
     return (
       this.db
         .prepare(

@@ -11,6 +11,8 @@ import { CorsiTraining } from "./CorsiTraining";
 import { CorsiRecords } from "./CorsiRecords";
 import { StroopTraining } from "./StroopTraining";
 import { StroopRecords } from "./StroopRecords";
+import { MentalRotationTraining } from "./MentalRotationTraining";
+import { MentalRotationRecords } from "./MentalRotationRecords";
 import { NBackGame, type GameSnapshot, type Dimension } from "./game";
 import {
   generateSequence,
@@ -25,6 +27,7 @@ import {
 import {
   GAME,
   STROOP_GAME,
+  ROTATION_GAME,
   COLOR_GAME,
   TRIPLE_GAME,
   GAME_IDS,
@@ -52,6 +55,7 @@ import {
 type Page =
   | "home"
   | "stroop"
+  | "mental-rotation"
   | "n-back"
   | "color-n-back"
   | "triple-n-back"
@@ -60,36 +64,40 @@ type Page =
   | "corsi-backward";
 const applicationTitle = document.title;
 const currentPage = (): Page =>
-  location.hash === "#stroop"
-    ? "stroop"
-    : location.hash === "#corsi"
-      ? "corsi"
-      : location.hash === "#corsi-backward"
-        ? "corsi-backward"
-        : location.hash === "#n-back"
-          ? "n-back"
-          : location.hash === "#color-n-back"
-            ? "color-n-back"
-            : location.hash === "#triple-n-back"
-              ? "triple-n-back"
-              : location.hash === "#records"
-                ? "records"
-                : "home";
+  location.hash === "#mental-rotation"
+    ? "mental-rotation"
+    : location.hash === "#stroop"
+      ? "stroop"
+      : location.hash === "#corsi"
+        ? "corsi"
+        : location.hash === "#corsi-backward"
+          ? "corsi-backward"
+          : location.hash === "#n-back"
+            ? "n-back"
+            : location.hash === "#color-n-back"
+              ? "color-n-back"
+              : location.hash === "#triple-n-back"
+                ? "triple-n-back"
+                : location.hash === "#records"
+                  ? "records"
+                  : "home";
 const go = (page: Page) => {
   location.hash = page;
 };
 const trainingPage = (game: GameId): Page =>
-  game === STROOP_GAME
-    ? "stroop"
-    : game === CORSI_FORWARD
-      ? "corsi"
-      : game === CORSI_BACKWARD
-        ? "corsi-backward"
-        : game === GAME
-          ? "n-back"
-          : game === COLOR_GAME
-            ? "color-n-back"
-            : "triple-n-back";
+  game === ROTATION_GAME
+    ? "mental-rotation"
+    : game === STROOP_GAME
+      ? "stroop"
+      : game === CORSI_FORWARD
+        ? "corsi"
+        : game === CORSI_BACKWARD
+          ? "corsi-backward"
+          : game === GAME
+            ? "n-back"
+            : game === COLOR_GAME
+              ? "color-n-back"
+              : "triple-n-back";
 const pageGame = (page: Page): NBackGameId =>
   page === "triple-n-back"
     ? TRIPLE_GAME
@@ -316,7 +324,7 @@ export function App() {
     document.title =
       page === "home"
         ? applicationTitle
-        : `${page === "records" ? "个人记录" : page === "stroop" ? GAME_NAMES[STROOP_GAME] : page === "corsi" ? "顺序记忆 · 正序" : page === "corsi-backward" ? "顺序记忆 · 倒序" : GAME_NAMES[pageGame(page)]} | ${applicationTitle}`;
+        : `${page === "records" ? "个人记录" : page === "mental-rotation" ? GAME_NAMES[ROTATION_GAME] : page === "stroop" ? GAME_NAMES[STROOP_GAME] : page === "corsi" ? "顺序记忆 · 正序" : page === "corsi-backward" ? "顺序记忆 · 倒序" : GAME_NAMES[pageGame(page)]} | ${applicationTitle}`;
   }, [page]);
   useEffect(() => {
     void refresh();
@@ -467,7 +475,17 @@ export function App() {
         {page === "home" ? (
           <Home />
         ) : page === "records" ? (
-          recordsGame === STROOP_GAME ? (
+          recordsGame === ROTATION_GAME ? (
+            <MentalRotationRecords
+              user={user}
+              revision={revision}
+              onGame={setRecordsGame}
+              onTrain={(game) => go(trainingPage(game))}
+              onLogin={openLogin}
+              onError={onError}
+              onUser={verifiedUser}
+            />
+          ) : recordsGame === STROOP_GAME ? (
             <StroopRecords
               user={user}
               revision={revision}
@@ -499,6 +517,16 @@ export function App() {
               onUser={verifiedUser}
             />
           )
+        ) : page === "mental-rotation" ? (
+          <MentalRotationTraining
+            user={user}
+            offline={offline}
+            onUser={verifiedUser}
+            onError={onError}
+            onSaved={savedCallback}
+            onRecords={openRecords}
+            onAbortNotice={abortNotice}
+          />
         ) : page === "stroop" ? (
           <StroopTraining
             user={user}
@@ -583,6 +611,38 @@ function Home() {
             </button>
           </article>
         ))}
+        <article className="game-card" aria-labelledby="rotation-title">
+          <div className="game-card-icon">
+            <svg
+              className="rotation-mini"
+              aria-hidden="true"
+              viewBox="0 0 40 40"
+            >
+              <path d="M4 5h12v5H9v9H4z M25 22h11v5h-6v8h-5z" />
+              <path
+                d="M26 6a9 9 0 0 1 8 9m-5-2 5 3 2-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </svg>
+          </div>
+          <h2 id="rotation-title">心理旋转</h2>
+          <p className="game-description">
+            在脑海中转动图形，判断是仅旋转还是镜像。
+          </p>
+          <div className="game-meta">
+            <span>32 题 · 不限时</span>
+            <span>空间判断</span>
+          </div>
+          <button
+            className="primary card-start"
+            onClick={() => go("mental-rotation")}
+          >
+            开始训练
+            <Icon name="arrow" size={18} />
+          </button>
+        </article>
         <article className="game-card" aria-labelledby="stroop-title">
           <div className="game-card-icon">
             <span className="stroop-mini" aria-hidden="true">

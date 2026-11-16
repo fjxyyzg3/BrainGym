@@ -1,4 +1,4 @@
-> 摘要：BrainGym 的环境与发布边界、模块、N-back／Corsi／Stroop 成绩合同、双路径运行、PWA 缓存、WheelMaker 生命周期及会话信任边界。
+> 摘要：BrainGym 的环境与发布边界、模块、N-back／Corsi／Stroop／心理旋转成绩合同、双路径运行、PWA 缓存、WheelMaker 生命周期及会话信任边界。
 
 # 架构与数据边界
 
@@ -26,6 +26,8 @@ BrainGym 使用 React 和 Vite 构建浏览器界面，Fastify 在生产环境�
 | `src/shared/paths.ts`、`src/client/base-path.ts`                    | 服务端基础路径校验和浏览器运行时路径读取                |
 
 Stroop 的训练、记录和内存状态由 `src/client/StroopTraining.tsx`、`StroopRecords.tsx`、`stroop-game.ts` 承担；`src/shared/stroop.ts` 负责共享规则和指标，`src/server/stroop-store.ts` 负责其附加成绩表。
+
+心理旋转由 `MentalRotationTraining.tsx`、`MentalRotationRecords.tsx` 和独立 `mental-rotation-game.ts` 负责训练与记录。共享 `mental-rotation.ts` 维护分类规则和指标，`rotation-geometry.ts`、`rotation-shapes.ts` 负责几何与备用轮廓；`RotationFigure.tsx` 将相同几何事实显示为 SVG，`mental-rotation-store.ts` 保存附加成绩。
 
 ## 开发、数据与发布边界
 
@@ -96,9 +98,9 @@ React 将网络故障与 401/身份冲突分开处理。普通开局重新请求
 
 ### Corsi 独立合同
 
-`corsi-forward`、`corsi-backward` 使用独立 `CorsiGame`，不进入 N-back 的维度、1～5-back 范围或百分制计算。公共 `GameId` 覆盖三种 N-back、两个 Corsi 方向及 Stroop，`NBackGameId` 只覆盖三种 N-back；原 `ResultInput`、`SavedResult`、`History` 保持 N-back 类型兼容，公共分派使用 `AnyResultInput`、`AnySavedResult`、`AnyHistory`。
+`corsi-forward`、`corsi-backward` 使用独立 `CorsiGame`，不进入 N-back 的维度、1～5-back 范围或百分制计算。公共 `GameId` 覆盖三种 N-back、两个 Corsi 方向、Stroop 及心理旋转，`NBackGameId` 只覆盖三种 N-back；原 `ResultInput`、`SavedResult`、`History` 保持 N-back 类型兼容，公共分派使用 `AnyResultInput`、`AnySavedResult`、`AnyHistory`。
 
-服务端追加 `corsi_results`、`corsi_progress_resets` 及索引，核心 schema 仍为 1，旧程序可忽略附加表。保存事务跨两张成绩表检查同用户 result ID；原三种 N-back 请求的规范化字段顺序保持不变。发布指纹兼容无附加表的旧库，并在附加表存在时保护其存在性和既有行，包括恢复世代。程序回退不删除附加表、不回滚数据库。
+服务端追加 `corsi_results`、`corsi_progress_resets` 及索引，核心 schema 仍为 1，旧程序可忽略附加表。当前保存事务在四张成绩表之间检查同用户 result ID；原三种 N-back 请求的规范化字段顺序保持不变。发布指纹兼容无附加表的旧库，并在附加表存在时保护其存在性和既有行，包括恢复世代。程序回退不删除附加表、不回滚数据库。
 
 `corsi/progress` 以有效会话返回两个方向的当前世代、起点、最佳及服务端时间锚点；`corsi/progress/reset` 按预期身份与世代比较并递增。旧世代结果保留历史和最佳，不参与当前起点。Corsi 完成时间由开局服务端时间加客户端单调经过时间生成，首次保存的未来容差为 5000 ms；历史异常时间记录永久排除在起点推导外，不改变 N-back 时间语义。规则和字段详见 [Corsi Wiki](corsi.md)。
 
@@ -106,6 +108,12 @@ React 将网络故障与 401/身份冲突分开处理。普通开局重新请求
 
 `stroop`／版本 `1` 使用独立引擎，题面及反馈均使用单调时钟，从各自回执开始计时；末题判定后冻结完整结果。正式局保存两组正确／错误／超时次数和正确题总耗时（毫秒），服务端复算准确率、正确题平均反应时间与干扰耗时差，不保存逐题日志。热身与游客不发起保存请求。
 
-附加 `stroop_results` 表的初始化具有原子性，可重复执行，核心 schema 仍为 1。当前保存事务在三张成绩表中统一检查同用户结果 ID。历史、最佳仍由会话授权，并按 `game=stroop` 分派；最佳先比较准确率，再比较正确题平均耗时。发布指纹保护新表的存在性及既有行，程序恢复保留新表。完整字段与边界见 [Stroop Wiki](stroop.md)。
+附加 `stroop_results` 表的初始化具有原子性，可重复执行，核心 schema 仍为 1。当前保存事务在四张成绩表中统一检查同用户结果 ID。历史、最佳仍由会话授权，并按 `game=stroop` 分派；最佳先比较准确率，再比较正确题平均耗时。发布指纹保护新表的存在性及既有行，程序恢复保留新表。完整字段与边界见 [Stroop Wiki](stroop.md)。
+
+### 心理旋转独立合同
+
+`mental-rotation`／版本 `1` 由独立引擎管理不限时答题、800 ms 反馈及末题完成边界。SVG 由共享整数格几何生成，随机轮廓与备用轮廓共用合法性及旋转／镜像等价检查。正式局保存 16 个交叉分类的正确／错误数与正确总耗时；服务端复算整体指标，客户端按角度及复杂度聚合展示，不保存逐题日志。
+
+附加 `mental_rotation_results` 表原子、可重复初始化，核心 schema 保持为 1，公共结果分派复用现有会话、Origin、请求体上限及四表事务。历史和最佳按 `game=mental-rotation` 与会话用户筛选；发布指纹保护新表存在性及既有行，程序恢复保留新表。具体规则见 [心理旋转 Wiki](mental-rotation.md)。
 
 来源：[接入 spec](../scope/2026-11-12-wheelmaker-integration.md)、[API](../../src/server/app.ts)、[运行入口](../../src/server/main.ts)、[托管协议](../../src/server/managed.ts)、[Forwarding](../../src/server/forwarding.ts)、[客户端地址](../../src/server/client-ip.ts)、[存储](../../src/server/store.ts)、[游戏引擎](../../src/client/game.ts)、[规则](n-back.md)、[运维](operations.md)。SQLite 使用 Node 内置模块，其 API 参考为 [Node.js SQLite 文档](https://nodejs.org/api/sqlite.html)。

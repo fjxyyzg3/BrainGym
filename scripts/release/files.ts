@@ -225,6 +225,7 @@ export function databaseFingerprints(path: string): Fingerprints {
       "corsi_results",
       "corsi_progress_resets",
       "stroop_results",
+      "mental_rotation_results",
     ].filter((table) =>
       database
         .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
@@ -246,7 +247,8 @@ export function databaseFingerprints(path: string): Fingerprints {
           JSON.stringify(
             table === "results" ||
               table === "corsi_results" ||
-              table === "stroop_results"
+              table === "stroop_results" ||
+              table === "mental_rotation_results"
               ? [row.user_id, row.result_id]
               : table === "corsi_progress_resets"
                 ? [row.user_id, row.game, row.version]

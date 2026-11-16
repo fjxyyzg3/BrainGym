@@ -45,7 +45,7 @@
 
 既有异常未来记录按不可变的首次入库时间判定，永久排除在起点推导之外，历史标记异常，最佳仍保留其长度表现。当前日期后来越过该完成时间也不会使它重新决定起点。
 
-`corsi_results` 保存成绩摘要，`corsi_progress_resets` 保存用户／方向／版本的当前世代与最后恢复时间。两表以附加扩展方式在同一事务中初始化，支持重复打开，核心 `PRAGMA user_version` 保持 `1`；不修改既有 `results` 表、N-back payload 或历史分数。当前程序在两张成绩表之间统一检查同用户结果 ID，规范化内容相同返回原记录，不同内容返回 409。
+`corsi_results` 保存成绩摘要，`corsi_progress_resets` 保存用户／方向／版本的当前世代与最后恢复时间。两表以附加扩展方式在同一事务中初始化，支持重复打开，核心 `PRAGMA user_version` 保持 `1`；不修改既有 `results` 表、N-back payload 或历史分数。当前程序在 N-back、Corsi、Stroop 和心理旋转四张成绩表之间统一检查同用户结果 ID，规范化内容相同返回原记录，不同内容返回 409。
 
 历史和最佳复用 `history`、`bests` 的 `game=corsi-forward`／`corsi-backward` 参数；历史每页 20 条，最佳排除 0 格。`POST /api/corsi/progress/reset` 接受 `game`、`expectedUserId`、`expectedEpoch`，会话决定实际用户，预期用户只作前置校验，事务中比较并递增世代。所有私人接口沿用有效 Cookie 会话、Origin 校验、`no-store` 和基础路径合同。
 

@@ -1283,128 +1283,157 @@ tr:last-child td {
   }
 }
 
-/* Corsi uses the existing palette and cards, with a separate input board. */
-.stroop-mini {
+/* Timed choice games share the existing palette, cards and controls. */
+.stroop-mini,
+.task-switching-mini {
   font-size: 32px;
   font-weight: 750;
   color: var(--accent);
 }
-.stroop-panel {
+.stroop-panel,
+.task-switching-panel {
   padding: 28px;
 }
-.stroop-panel h2 {
+.stroop-panel h2,
+.task-switching-panel h2 {
   margin: 0 0 16px;
 }
-.stroop-panel > button {
+.stroop-panel > button,
+.task-switching-panel > button {
   margin: 8px 8px 8px 0;
 }
-.stroop-panel li {
+.stroop-panel li,
+.task-switching-panel li {
   margin-bottom: 12px;
 }
-.stroop-panel p {
+.stroop-panel p,
+.task-switching-panel p {
   line-height: 1.7;
 }
-.stroop-start-actions {
+.stroop-start-actions,
+.task-switching-start-actions {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin: 20px 0;
 }
-.stroop-training {
+.stroop-training,
+.task-switching-training {
   max-width: 680px;
   margin: 0 auto;
 }
-.stroop-training h1 {
+.stroop-training h1,
+.task-switching-training h1 {
   font-size: clamp(22px, 4vw, 30px);
 }
 .stroop-stimulus,
-.stroop-example {
+.stroop-example,
+.task-switching-stimulus,
+.task-switching-example {
   background: #172033;
   color: #fff;
   border-radius: 16px;
   text-align: center;
 }
-.stroop-stimulus {
+.stroop-stimulus,
+.task-switching-stimulus {
   min-height: 220px;
   display: grid;
   place-items: center;
   margin: 24px 0;
   padding: 24px;
 }
-.stroop-word {
+.stroop-word,
+.task-switching-word {
   font-size: clamp(72px, 18vw, 112px);
   font-weight: 750;
   line-height: 1.2;
 }
-.stroop-stimulus strong {
+.stroop-stimulus strong,
+.task-switching-stimulus strong {
   font-size: 32px;
 }
-.stroop-stimulus p {
+.stroop-stimulus p,
+.task-switching-stimulus p {
   color: #fff;
   margin-bottom: 0;
 }
-.stroop-example {
+.stroop-example,
+.task-switching-example {
   margin: 20px 0;
   padding: 24px;
 }
-.stroop-example > span {
+.stroop-example > span,
+.task-switching-example > span {
   font-size: 48px;
   font-weight: 700;
 }
-.stroop-example p {
+.stroop-example p,
+.task-switching-example p {
   color: #fff;
   margin-bottom: 0;
 }
-.stroop-answers {
+.stroop-answers,
+.task-switching-answers {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
-.stroop-answers button {
+.stroop-answers button,
+.task-switching-answers button {
   min-height: 64px;
   font-size: 22px;
   touch-action: manipulation;
   user-select: none;
 }
-.stroop-answers button[aria-disabled="true"] {
+.stroop-answers button[aria-disabled="true"],
+.task-switching-answers button[aria-disabled="true"] {
   opacity: 0.5;
   cursor: default;
 }
-.stroop-training-footer {
+.stroop-training-footer,
+.task-switching-training-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-top: 20px;
 }
-.stroop-summary {
+.stroop-summary,
+.task-switching-summary {
   min-width: 0;
 }
-.stroop-headline-stats {
+.stroop-headline-stats,
+.task-switching-headline-stats {
   display: flex;
   flex-wrap: wrap;
   gap: 24px 48px;
   margin: 20px 0;
 }
-.stroop-headline-stats span {
+.stroop-headline-stats span,
+.task-switching-headline-stats span {
   display: block;
   color: var(--muted);
   font-size: 14px;
   margin-bottom: 6px;
 }
-.stroop-headline-stats strong {
+.stroop-headline-stats strong,
+.task-switching-headline-stats strong {
   font-size: clamp(26px, 5vw, 36px);
   font-variant-numeric: tabular-nums;
 }
-.stroop-history {
+.stroop-history,
+.task-switching-history {
   display: grid;
   gap: 16px;
 }
 @media (max-width: 600px) {
-  .stroop-panel {
+  .stroop-panel,
+  .task-switching-panel {
     padding: 20px;
   }
-  .stroop-training-footer {
+  .stroop-training-footer,
+  .task-switching-training-footer {
     align-items: flex-start;
   }
 }
@@ -1720,4 +1749,30 @@ tr:last-child td {
   .corsi-options {
     padding: 20px;
   }
+}
+
+.task-switching-rule {
+  font-size: 22px;
+  font-weight: 650;
+  margin: 0 0 12px;
+}
+.task-switching-training {
+  container: task-switching / inline-size;
+}
+@container task-switching (inline-size < 24rem) {
+  .task-switching-answers button {
+    font-size: 18px;
+  }
+}
+.task-switching-answers button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-block-size: 64px;
+}
+.task-switching-answers kbd {
+  font-size: 13px;
+  color: var(--muted);
 }

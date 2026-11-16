@@ -11,6 +11,8 @@ import { CorsiTraining } from "./CorsiTraining";
 import { CorsiRecords } from "./CorsiRecords";
 import { StroopTraining } from "./StroopTraining";
 import { StroopRecords } from "./StroopRecords";
+import { TaskSwitchingTraining } from "./TaskSwitchingTraining";
+import { TaskSwitchingRecords } from "./TaskSwitchingRecords";
 import { MentalRotationTraining } from "./MentalRotationTraining";
 import { MentalRotationRecords } from "./MentalRotationRecords";
 import { NBackGame, type GameSnapshot, type Dimension } from "./game";
@@ -28,6 +30,7 @@ import {
   GAME,
   STROOP_GAME,
   ROTATION_GAME,
+  TASK_SWITCHING_GAME,
   COLOR_GAME,
   TRIPLE_GAME,
   GAME_IDS,
@@ -55,6 +58,7 @@ import {
 type Page =
   | "home"
   | "stroop"
+  | "task-switching"
   | "mental-rotation"
   | "n-back"
   | "color-n-back"
@@ -64,40 +68,44 @@ type Page =
   | "corsi-backward";
 const applicationTitle = document.title;
 const currentPage = (): Page =>
-  location.hash === "#mental-rotation"
-    ? "mental-rotation"
-    : location.hash === "#stroop"
-      ? "stroop"
-      : location.hash === "#corsi"
-        ? "corsi"
-        : location.hash === "#corsi-backward"
-          ? "corsi-backward"
-          : location.hash === "#n-back"
-            ? "n-back"
-            : location.hash === "#color-n-back"
-              ? "color-n-back"
-              : location.hash === "#triple-n-back"
-                ? "triple-n-back"
-                : location.hash === "#records"
-                  ? "records"
-                  : "home";
+  location.hash === "#task-switching"
+    ? "task-switching"
+    : location.hash === "#mental-rotation"
+      ? "mental-rotation"
+      : location.hash === "#stroop"
+        ? "stroop"
+        : location.hash === "#corsi"
+          ? "corsi"
+          : location.hash === "#corsi-backward"
+            ? "corsi-backward"
+            : location.hash === "#n-back"
+              ? "n-back"
+              : location.hash === "#color-n-back"
+                ? "color-n-back"
+                : location.hash === "#triple-n-back"
+                  ? "triple-n-back"
+                  : location.hash === "#records"
+                    ? "records"
+                    : "home";
 const go = (page: Page) => {
   location.hash = page;
 };
 const trainingPage = (game: GameId): Page =>
-  game === ROTATION_GAME
-    ? "mental-rotation"
-    : game === STROOP_GAME
-      ? "stroop"
-      : game === CORSI_FORWARD
-        ? "corsi"
-        : game === CORSI_BACKWARD
-          ? "corsi-backward"
-          : game === GAME
-            ? "n-back"
-            : game === COLOR_GAME
-              ? "color-n-back"
-              : "triple-n-back";
+  game === TASK_SWITCHING_GAME
+    ? "task-switching"
+    : game === ROTATION_GAME
+      ? "mental-rotation"
+      : game === STROOP_GAME
+        ? "stroop"
+        : game === CORSI_FORWARD
+          ? "corsi"
+          : game === CORSI_BACKWARD
+            ? "corsi-backward"
+            : game === GAME
+              ? "n-back"
+              : game === COLOR_GAME
+                ? "color-n-back"
+                : "triple-n-back";
 const pageGame = (page: Page): NBackGameId =>
   page === "triple-n-back"
     ? TRIPLE_GAME
@@ -324,7 +332,7 @@ export function App() {
     document.title =
       page === "home"
         ? applicationTitle
-        : `${page === "records" ? "个人记录" : page === "mental-rotation" ? GAME_NAMES[ROTATION_GAME] : page === "stroop" ? GAME_NAMES[STROOP_GAME] : page === "corsi" ? "顺序记忆 · 正序" : page === "corsi-backward" ? "顺序记忆 · 倒序" : GAME_NAMES[pageGame(page)]} | ${applicationTitle}`;
+        : `${page === "records" ? "个人记录" : page === "task-switching" ? GAME_NAMES[TASK_SWITCHING_GAME] : page === "mental-rotation" ? GAME_NAMES[ROTATION_GAME] : page === "stroop" ? GAME_NAMES[STROOP_GAME] : page === "corsi" ? "顺序记忆 · 正序" : page === "corsi-backward" ? "顺序记忆 · 倒序" : GAME_NAMES[pageGame(page)]} | ${applicationTitle}`;
   }, [page]);
   useEffect(() => {
     void refresh();
@@ -475,7 +483,17 @@ export function App() {
         {page === "home" ? (
           <Home />
         ) : page === "records" ? (
-          recordsGame === ROTATION_GAME ? (
+          recordsGame === TASK_SWITCHING_GAME ? (
+            <TaskSwitchingRecords
+              user={user}
+              revision={revision}
+              onGame={setRecordsGame}
+              onTrain={(game) => go(trainingPage(game))}
+              onLogin={openLogin}
+              onError={onError}
+              onUser={verifiedUser}
+            />
+          ) : recordsGame === ROTATION_GAME ? (
             <MentalRotationRecords
               user={user}
               revision={revision}
@@ -517,6 +535,16 @@ export function App() {
               onUser={verifiedUser}
             />
           )
+        ) : page === "task-switching" ? (
+          <TaskSwitchingTraining
+            user={user}
+            offline={offline}
+            onUser={verifiedUser}
+            onError={onError}
+            onSaved={savedCallback}
+            onRecords={openRecords}
+            onAbortNotice={abortNotice}
+          />
         ) : page === "mental-rotation" ? (
           <MentalRotationTraining
             user={user}
@@ -611,6 +639,28 @@ function Home() {
             </button>
           </article>
         ))}
+        <article className="game-card" aria-labelledby="task-switching-title">
+          <div className="game-card-icon">
+            <span className="task-switching-mini" aria-hidden="true">
+              ↔
+            </span>
+          </div>
+          <h2 id="task-switching-title">规则切换</h2>
+          <p className="game-description">
+            随提示判断奇偶或大小，在重复与切换中保持准确。
+          </p>
+          <div className="game-meta">
+            <span>40 道计分题</span>
+            <span>准确率与切换耗时差</span>
+          </div>
+          <button
+            className="primary card-start"
+            onClick={() => go("task-switching")}
+          >
+            开始训练
+            <Icon name="arrow" size={18} />
+          </button>
+        </article>
         <article className="game-card" aria-labelledby="rotation-title">
           <div className="game-card-icon">
             <svg

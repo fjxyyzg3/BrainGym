@@ -58,11 +58,13 @@ export const CORSI_GAME_IDS = [CORSI_FORWARD, CORSI_BACKWARD] as const;
 export type CorsiGameId = (typeof CORSI_GAME_IDS)[number];
 export const STROOP_GAME = "stroop" as const;
 export const ROTATION_GAME = "mental-rotation" as const;
+export const TASK_SWITCHING_GAME = "task-switching" as const;
 export const GAME_IDS = [
   ...NBACK_GAME_IDS,
   ...CORSI_GAME_IDS,
   STROOP_GAME,
   ROTATION_GAME,
+  TASK_SWITCHING_GAME,
 ] as const;
 export type GameId = (typeof GAME_IDS)[number];
 export type Dimension = "position" | "color" | "number";
@@ -84,6 +86,7 @@ export const GAME_NAMES: Record<GameId, string> = {
   [CORSI_BACKWARD]: "顺序记忆 · 倒序",
   [STROOP_GAME]: "颜色干扰 · Stroop",
   [ROTATION_GAME]: "心理旋转",
+  [TASK_SWITCHING_GAME]: "规则切换",
 };
 export const isNBackGameId = (value: unknown): value is NBackGameId =>
   value === GAME || value === COLOR_GAME || value === TRIPLE_GAME;
@@ -93,7 +96,8 @@ export const isGameId = (value: unknown): value is GameId =>
   isNBackGameId(value) ||
   isCorsiGameId(value) ||
   value === STROOP_GAME ||
-  value === ROTATION_GAME;
+  value === ROTATION_GAME ||
+  value === TASK_SWITCHING_GAME;
 export const VERSION = 1 as const;
 
 export interface CorsiSummary {
@@ -197,9 +201,53 @@ export interface RotationHistory {
   total: number;
   pageSize: number;
 }
+export type TaskSwitchingRule = "parity" | "magnitude";
+export type TaskSwitchingAnswer = 0 | 1;
+export interface TaskSwitchingCounts {
+  correct: number;
+  wrong: number;
+  timeout: number;
+  correctRtTotalMs: number;
+}
+export interface TaskSwitchingSummary {
+  repeat: TaskSwitchingCounts;
+  switch: TaskSwitchingCounts;
+}
+export interface TaskSwitchingMetrics {
+  score: number;
+  meanCorrectRtMs: number | null;
+  switchCostMs: number | null;
+}
+export interface TaskSwitchingResultInput extends TaskSwitchingSummary {
+  resultId: string;
+  startedByUserId: string;
+  game: typeof TASK_SWITCHING_GAME;
+  version: 1;
+  completedAt: string;
+}
+export type TaskSwitchingSavedResult = TaskSwitchingResultInput &
+  TaskSwitchingMetrics & { receivedAt: string };
+export interface TaskSwitchingHistory {
+  items: TaskSwitchingSavedResult[];
+  page: number;
+  total: number;
+  pageSize: number;
+}
 export type AnyResultInput =
-  ResultInput | CorsiResultInput | StroopResultInput | RotationResultInput;
+  | ResultInput
+  | CorsiResultInput
+  | StroopResultInput
+  | RotationResultInput
+  | TaskSwitchingResultInput;
 export type AnySavedResult =
-  SavedResult | CorsiSavedResult | StroopSavedResult | RotationSavedResult;
+  | SavedResult
+  | CorsiSavedResult
+  | StroopSavedResult
+  | RotationSavedResult
+  | TaskSwitchingSavedResult;
 export type AnyHistory =
-  History | CorsiHistory | StroopHistory | RotationHistory;
+  | History
+  | CorsiHistory
+  | StroopHistory
+  | RotationHistory
+  | TaskSwitchingHistory;

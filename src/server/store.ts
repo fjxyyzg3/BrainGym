@@ -6,6 +6,10 @@ import {
   GAME,
   STROOP_GAME,
   ROTATION_GAME,
+  TASK_SWITCHING_GAME,
+  type TaskSwitchingResultInput,
+  type TaskSwitchingSavedResult,
+  type TaskSwitchingHistory,
   TRIPLE_GAME,
   isNBackGameId,
   isCorsiGameId,
@@ -39,6 +43,11 @@ import {
   parseRotationResult,
 } from "./mental-rotation-store.js";
 
+import {
+  TaskSwitchingRepository,
+  parseTaskSwitchingResult,
+} from "./task-switching-store.js";
+
 const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 const secret = () => randomBytes(32).toString("base64url");
@@ -57,6 +66,8 @@ export function parseResult(value: unknown): AnyResultInput {
     return parseStroopResult(value);
   if ((value as { game?: unknown }).game === ROTATION_GAME)
     return parseRotationResult(value);
+  if ((value as { game?: unknown }).game === TASK_SWITCHING_GAME)
+    return parseTaskSwitchingResult(value);
   const p = value as ResultInput;
   const id = /^[a-f0-9-]{36}$/i;
   if (
@@ -126,6 +137,7 @@ export class Store {
   private corsi: CorsiRepository;
   private stroop: StroopRepository;
   private rotation: RotationRepository;
+  private taskSwitching: TaskSwitchingRepository;
   private closed = false;
   private busyTimeout: number;
   constructor(path: string, options: { busyTimeoutMs?: number } = {}) {
@@ -160,6 +172,7 @@ export class Store {
       this.corsi = new CorsiRepository(this.db);
       this.stroop = new StroopRepository(this.db);
       this.rotation = new RotationRepository(this.db);
+      this.taskSwitching = new TaskSwitchingRepository(this.db);
     } catch (error) {
       this.db.close();
       throw error;
@@ -272,6 +285,11 @@ export class Store {
     payload: RotationResultInput,
     now: number,
   ): RotationSavedResult;
+  save(
+    user: User,
+    payload: TaskSwitchingResultInput,
+    now: number,
+  ): TaskSwitchingSavedResult;
   save(user: User, payload: AnyResultInput, now: number): AnySavedResult;
   save(user: User, payload: AnyResultInput, now: number): AnySavedResult {
     if (payload.startedByUserId !== user.id)
@@ -289,6 +307,16 @@ export class Store {
       const serialized = JSON.stringify(payload);
       const corsi = this.corsi.find(user.id, payload.resultId);
       const stroop = this.stroop.find(user.id, payload.resultId);
+      const taskSwitching = this.taskSwitching.find(user.id, payload.resultId);
+      if (taskSwitching) {
+        if (taskSwitching.serialized !== serialized)
+          throw new AppError(
+            409,
+            "RESULT_CONFLICT",
+            "该对局已有不同的保存内容",
+          );
+        return taskSwitching.result;
+      }
       const rotation = this.rotation.find(user.id, payload.resultId);
       if (rotation) {
         if (rotation.serialized !== serialized)
@@ -332,6 +360,8 @@ export class Store {
         return this.stroop.saveNew(user.id, payload, now);
       if (payload.game === ROTATION_GAME)
         return this.rotation.saveNew(user.id, payload, now);
+      if (payload.game === TASK_SWITCHING_GAME)
+        return this.taskSwitching.saveNew(user.id, payload, now);
       const nback = payload as ResultInput;
       const receivedAt = new Date(now).toISOString();
       const computed = scoreResult(nback);
@@ -363,11 +393,18 @@ export class Store {
     page: number,
     game: typeof ROTATION_GAME,
   ): RotationHistory;
+  history(
+    userId: string,
+    page: number,
+    game: typeof TASK_SWITCHING_GAME,
+  ): TaskSwitchingHistory;
   history(userId: string, page: number, game: GameId): AnyHistory;
   history(userId: string, page: number, game: GameId = GAME): AnyHistory {
     if (isCorsiGameId(game)) return this.corsi.history(userId, page, game);
     if (game === STROOP_GAME) return this.stroop.history(userId, page);
     if (game === ROTATION_GAME) return this.rotation.history(userId, page);
+    if (game === TASK_SWITCHING_GAME)
+      return this.taskSwitching.history(userId, page);
     const total = this.db
       .prepare(
         "SELECT count(*) AS count FROM results WHERE user_id=? AND game=? AND version=?",
@@ -384,11 +421,16 @@ export class Store {
   bests(userId: string, game: CorsiGameId): CorsiSavedResult[];
   bests(userId: string, game: typeof STROOP_GAME): StroopSavedResult[];
   bests(userId: string, game: typeof ROTATION_GAME): RotationSavedResult[];
+  bests(
+    userId: string,
+    game: typeof TASK_SWITCHING_GAME,
+  ): TaskSwitchingSavedResult[];
   bests(userId: string, game: GameId): AnySavedResult[];
   bests(userId: string, game: GameId = GAME): AnySavedResult[] {
     if (isCorsiGameId(game)) return this.corsi.bests(userId, game);
     if (game === STROOP_GAME) return this.stroop.bests(userId);
     if (game === ROTATION_GAME) return this.rotation.bests(userId);
+    if (game === TASK_SWITCHING_GAME) return this.taskSwitching.bests(userId);
     return (
       this.db
         .prepare(

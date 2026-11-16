@@ -73,7 +73,7 @@
 - [x] 顺序运行 `npm run typecheck`、`npm run build`、`npm test`、`npm run test:e2e`，同一构建设置 `E2E_BASE_PATH=/braingym/` 再跑 E2E，随后清除变量；失败修复后按失效范围补跑，不并行构建与测试。
 - [x] 原生 CDP 在独立库验证 question／feedback／complete 后台边界；检查 320、390、768、1440 宽度、触控、键盘、缩放及 SVG 不裁切／同尺度，保存并查看截图。明确未验证的实体设备、硬件锁屏及像素精度。
 - [x] 调用 wiki 同步已确定目标，写真实 RED／GREEN、回归、安全 Findings／Verification／Residual Risk 与剩余风险；检查 status、stat、实际 diff、格式、链接及敏感文本，确认无新依赖。
-- [ ] 按完整门槛的有效证据 checkpoint 运行代码与文档；finalize 刷新远端、同步、push 核对 SHA，main 干净时合入推送并清理。
+- [x] 按完整门槛的有效证据 checkpoint 运行代码与文档；finalize 刷新远端、同步、push 核对 SHA，main 干净时合入推送并清理。
 
 ### Task 6: 稳定 main 演练与正式发布
 
@@ -81,10 +81,10 @@
 
 **Acceptance:** 已提交 main 对应的候选通过演练，正式运行与数据保留核验通过后才整体完成。
 
-- [ ] 从稳定 main 重新 Git prepare，先读运维与既有环境验收；运行 `npm run rehearse`，核对候选源码指纹、检查项、产物及当前 main 一致。
-- [ ] 显式执行 `npm run release -- deploy --candidate $releaseCandidate`，其中 `$releaseCandidate` 取上一项演练输出的 candidate 目录，随后 `npm run release -- status`；保持现有绝对数据库路径，定义不变不 Reload，失败遵循原恢复流程。
-- [ ] 真实入口只做匿名心理旋转热身／游客验证并拦截写请求，不创建正式测试账号或成绩；核对既有数据指纹、静态资源、匿名私人 API、实际安全头及页面错误。
-- [ ] 保存脱敏发布证据与验收结果，按纯文档检查 checkpoint／finalize，核对远端 SHA；报告变更、实际验证、剩余风险与 Git／发布状态。
+- [x] 从稳定 main 重新 Git prepare，先读运维与既有环境验收；运行 `npm run rehearse`，核对候选源码指纹、检查项、产物及当前 main 一致。
+- [x] 显式执行 `npm run release -- deploy --candidate $releaseCandidate`，其中 `$releaseCandidate` 取上一项演练输出的 candidate 目录，随后 `npm run release -- status`；保持现有绝对数据库路径，定义不变不 Reload，失败遵循原恢复流程。
+- [x] 真实入口只做匿名心理旋转热身／游客验证并拦截写请求，不创建正式测试账号或成绩；核对既有数据指纹、静态资源、匿名私人 API、实际安全头及页面错误。
+- [x] 保存脱敏发布证据与验收结果，按纯文档检查 checkpoint／finalize，核对远端 SHA；报告变更、实际验证、剩余风险与 Git／发布状态。
 
 ## 执行证据
 
@@ -94,3 +94,6 @@
 - 规则／引擎／API 聚焦 12 项、Node 全量 133 项通过；独立端口根路径和同一构建前缀路径各 82 项 E2E 通过。
 - 原生后台 question／feedback／complete 三阶段及 Stroop feedback 回归通过。首次默认端口全量运行失败日志保留，独立端口重跑未放宽门槛。
 - Wiki 经 write-doc 起草、独立优化及只读复核，两处事实表述已修正；60 个相对链接、全部本任务文件格式及凭据模式检查通过，package 与锁文件无改动。验收日志和截图已保留到稳定主工作区 `.runtime/rotation-evidence/`。
+- 代码 checkpoint 为 `8791452 feat: add mental rotation training`；已合入并推送 main，核对实际远端 SHA 后清理本任务分支和 worktree，未创建 PR，保留其它任务工作区。
+- 发布阶段从干净、与远端一致的 main `8791452` 重新 prepare。Git 快照候选的八项演练检查全部通过，正式发布为 `published / verified`；定义未写入、未 Reload，原绝对数据库路径及既有数据保留。
+- 正式 HTTPS 匿名热身 8 题、游客 32 题均完成；无写请求、页面错误或资源失败，心理旋转私人历史／最佳返回 401。真实入口 HSTS 和 Permissions-Policy 仍缺失，沿用既有 P2 加固项；脱敏证据见验收记录。
